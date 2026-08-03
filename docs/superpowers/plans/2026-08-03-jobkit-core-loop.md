@@ -65,7 +65,7 @@ The guard ships before the first push, because the push is the irreversible step
 - [ ] **Step 1: Initialize the repository**
 
 ```bash
-cd "C:/Users/srfin/Dropbox/Dev/repos/peckworks-jobdashboard"
+# run from the repo root
 git init
 git branch -M main
 ```

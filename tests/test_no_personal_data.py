@@ -52,6 +52,38 @@ def test_clean_repo_passes(tmp_path):
     assert npd.scan(tmp_path, ["Jane Doe"]) == []
 
 
+def test_tracked_files_in_any_dir_name_are_still_scanned(tmp_path):
+    """Regression: SKIP_DIRS must never grow to exclude a directory git tracks.
+
+    Round 1 added "superpowers" to SKIP_DIRS so the guard would stop scanning
+    docs/superpowers/ - a real, tracked, will-be-pushed directory - which made
+    it print "clean" over an actual leak. This plants a forbidden pattern
+    inside a *tracked* file under a directory literally named "superpowers"
+    (and, for good measure, "vendor" - already skipped on purpose) in a
+    throwaway git repo, and asserts the tracked one is always caught.
+    """
+    import os
+    import subprocess as sp
+
+    sp.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    env = {
+        **os.environ,
+        "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.com",
+        "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.com",
+    }
+    docs_dir = tmp_path / "docs" / "superpowers"
+    docs_dir.mkdir(parents=True)
+    (docs_dir / "plan.md").write_text("home is /Users/realleak here\n", encoding="utf-8")
+    sp.run(["git", "add", "."], cwd=tmp_path, check=True, env=env)
+    sp.run(["git", "commit", "-q", "-m", "init"], cwd=tmp_path, check=True, env=env)
+
+    hits = npd.scan(tmp_path, [])
+    assert any(
+        found == "/Users/realleak" and "docs" in rel.parts and "superpowers" in rel.parts
+        for rel, _, _, found in hits
+    ), "a tracked file under docs/superpowers/ must still be scanned, not silently skipped"
+
+
 def test_missing_local_list_fails_closed():
     """A fork without the local list must FAIL, never silently pass."""
     import os

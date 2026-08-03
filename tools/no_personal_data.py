@@ -9,6 +9,7 @@ Only patterns that reveal nothing on their own are hardcoded here.
 """
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -24,35 +25,63 @@ ALWAYS = [
 
 PLACEHOLDER_DOMAINS = ("example.com", "example.org", "example.net", "example.test")
 
-SKIP_DIRS = {
-    ".git", "__pycache__", "node_modules", "vendor", ".venv", ".pytest_cache",
-    # ponytail: SDD planning docs (docs/superpowers/, .superpowers/) quote this
-    # guard's own test fixtures verbatim as illustrative markdown examples.
-    # They're meta/tooling scaffolding, not shipped app content, so they're
-    # excluded the same way .git/vendor are. Revisit if real user data ever
-    # ends up in a plan doc instead of an example.
-    "superpowers", ".superpowers",
+# Fixture placeholders that legitimately appear in tracked planning docs
+# because those docs quote this guard's own test code verbatim (illustrative
+# examples, not real user data). Keyed by (relative path, exact matched text)
+# so it never masks the same string appearing anywhere else - test fixtures
+# under tmp_path are a different relative path and stay caught.
+PLACEHOLDER_ALLOWLIST: set[tuple[str, str]] = {
+    ("docs/superpowers/plans/2026-08-03-jobkit-core-loop.md", "/Users/someone"),
+    ("docs/superpowers/plans/2026-08-03-jobkit-core-loop.md", "/Users/whoever"),
+    ("docs/superpowers/plans/2026-08-03-jobkit-core-loop.md", "someone@gmail.com"),
 }
+
+SKIP_DIRS = {".git", "__pycache__", "node_modules", "vendor", ".venv", ".pytest_cache"}
 SKIP_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".pdf", ".ico", ".woff", ".woff2", ".zip"}
+# Relative-path (posix, repo-root-relative) exact matches, not bare basenames -
+# a file named test_no_personal_data.py dropped elsewhere must still be scanned.
 SKIP_NAMES = {
-    "no_personal_data.py",
-    "forbidden_strings.local.txt",
-    # ponytail: this test file's own fixtures contain example emails/paths
-    # used to exercise the ALWAYS patterns; same self-reference rationale as
-    # skipping no_personal_data.py above.
-    "test_no_personal_data.py",
+    "tools/no_personal_data.py",
+    "tools/forbidden_strings.local.txt",
+    "tests/test_no_personal_data.py",
 }
+
+
+def _tracked_files(repo: Path) -> list[Path] | None:
+    """Files git actually tracks in repo - i.e. what can reach GitHub.
+
+    Returns None (triggering the plain-directory rglob fallback) when repo
+    isn't a git work tree at all, or is a subdirectory of one (e.g. a pytest
+    tmp_path fixture) rather than the tracked repo root itself.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(repo), "rev-parse", "--show-toplevel"],
+            capture_output=True, text=True,
+        )
+    except FileNotFoundError:
+        return None  # git not installed
+    if result.returncode != 0:
+        return None
+    if Path(result.stdout.strip()).resolve() != repo.resolve():
+        return None
+    ls = subprocess.run(
+        ["git", "-C", str(repo), "ls-files"], capture_output=True, text=True, check=True,
+    )
+    return [repo / line for line in ls.stdout.splitlines() if line]
 
 
 def iter_files(repo: Path):
-    for path in sorted(repo.rglob("*")):
+    tracked = _tracked_files(repo)
+    paths = tracked if tracked is not None else sorted(repo.rglob("*"))
+    for path in paths:
         if not path.is_file():
             continue
         if any(part in SKIP_DIRS for part in path.parts):
             continue
         if path.suffix.lower() in SKIP_SUFFIXES:
             continue
-        if path.name in SKIP_NAMES:
+        if path.relative_to(repo).as_posix() in SKIP_NAMES:
             continue
         yield path
 
@@ -66,11 +95,14 @@ def scan(repo: Path, forbidden: list[str]) -> list[tuple[Path, int, str, str]]:
         except (UnicodeDecodeError, OSError):
             continue  # binary or unreadable; nothing to scan
         rel = path.relative_to(repo)
+        rel_posix = rel.as_posix()
         for lineno, line in enumerate(text.splitlines(), 1):
             for pattern, label in ALWAYS:
                 for match in re.finditer(pattern, line):
                     found = match.group()
                     if label == "email address" and found.lower().endswith(PLACEHOLDER_DOMAINS):
+                        continue
+                    if (rel_posix, found) in PLACEHOLDER_ALLOWLIST:
                         continue
                     hits.append((rel, lineno, label, found))
             low = line.lower()
