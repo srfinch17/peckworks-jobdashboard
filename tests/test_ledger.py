@@ -112,6 +112,16 @@ def test_a_never_applied_staged_job_is_not_in_flight():
     assert tally["in_flight"] == 0
 
 
+def test_a_job_first_seen_already_applied_counts_as_in_flight():
+    """No applied_date (the move was never observed), but it is genuinely
+    being waited on - the first scan of any workspace that already has
+    applied jobs in it must not make them invisible to in_flight."""
+    book, _ = ledger.sync({}, {"8_Studio_Remote_Artist": "applied"}, "2026-01-10")
+    assert "applied_date" not in book["8_Studio_Remote_Artist"]
+    tally = ledger.counts(book)
+    assert tally["in_flight"] == 1
+
+
 def test_offers_are_unaffected_by_the_in_flight_fix():
     book, folder = _staged()
     book, _ = ledger.sync(book, {folder: "applied"}, "2026-01-10")

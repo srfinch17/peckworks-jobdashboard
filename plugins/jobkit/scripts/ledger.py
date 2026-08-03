@@ -162,10 +162,17 @@ def counts(book: dict) -> dict:
         # Nothing closed it, so it is still open, even if the folder later
         # went missing; dropping it out of the count would read as good news
         # ("one fewer thing to wait on") when nothing actually resolved.
-        # applied_date is only ever set once, by an observed move into the
-        # applied lane, and is never cleared - so it can't be gamed by
-        # moving a folder back to "staged", unlike lane itself.
-        if "applied_date" in entry:
+        #
+        # applied_date is NOT the right signal here: sync() correctly leaves
+        # it unset when a folder is first seen already sitting in the
+        # applied lane (the move was never observed, so the date is
+        # unknown) - but that is still a genuinely applied, in-flight job.
+        # status is the honest signal instead: sync() sets it to "awaiting"
+        # the moment a folder is applied by either path (first-seen or
+        # observed move), and it stays "none" for anything only ever
+        # staged. So "not none, not closed" means "known to be applied and
+        # still open" - true in every case that matters here.
+        if status != "none":
             tally["in_flight"] += 1
             if status in ("interview_scheduled", "interviewed"):
                 tally["interviews"] += 1
