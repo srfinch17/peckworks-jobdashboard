@@ -12,6 +12,15 @@ import re
 DEFAULT_MAX_WORDS = 700
 DEFAULT_MAX_SECTIONS = 8
 
+# Superlatives read as a claim about the candidate unless they're plainly
+# describing an employer/place ("worked at a world-class studio"). The
+# preposition right before the word is the tell — skip the match there.
+_EMPLOYER_LOOKBEHIND = (
+    r"(?<!\bat a )(?<!\bat an )"
+    r"(?<!\bfor a )(?<!\bfor an )"
+    r"(?<!\bwith a )(?<!\bwith an )"
+)
+
 INFLATION_PATTERNS = [
     (r"\byears of (?:your|his|her|their|my)\b", "a comparison turned into a claim about time"),
     (r"\bextensive experience\b", "unearned scale"),
@@ -25,21 +34,27 @@ INFLATION_PATTERNS = [
     # "10+ years of", "a decade of" all invent a tenure the baseline may not have.
     (r"\byears? of\b", "an unearned claim about time"),
     (r"\bdecades? of\b", "an unearned claim about time"),
-    # superlatives: scale or quality asserted with nothing to back it.
-    (r"\bworld-class\b", "a superlative claim"),
-    (r"\bunparalleled\b", "a superlative claim"),
-    (r"\bbattle-tested\b", "a superlative claim"),
-    (r"\bhighly skilled\b", "a superlative claim"),
-    (r"\badvanced expertise\b", "unearned depth"),
-    (r"\bproven track record\b", "an unearned claim of results"),
+    # superlatives: scale or quality asserted with nothing to back it. Skipped
+    # when the phrase plainly describes the employer/place ("worked at a
+    # world-class studio"), not the candidate — that's ordinary, true prose.
+    (_EMPLOYER_LOOKBEHIND + r"\bworld-class\b", "a superlative claim"),
+    (_EMPLOYER_LOOKBEHIND + r"\bunparalleled\b", "a superlative claim"),
+    (_EMPLOYER_LOOKBEHIND + r"\bbattle-tested\b", "a superlative claim"),
+    (_EMPLOYER_LOOKBEHIND + r"\bhighly skilled\b", "a superlative claim"),
+    (_EMPLOYER_LOOKBEHIND + r"\badvanced expertise\b", "unearned depth"),
+    (_EMPLOYER_LOOKBEHIND + r"\bproven track record\b", "an unearned claim of results"),
     # authorship verbs: not necessarily false, but the check can't know who did
-    # what, so it flags for the user to confirm against their own baseline.
+    # what, so it flags for the user to confirm against their own baseline —
+    # the record of what they actually did — and tells them what to do about it.
     (r"\bled the (?:team|effort|project)\b",
-     "verify against the baseline: did they lead, or take part as one of the team?"),
+     "check your baseline (the record of what you actually did) — if it only shows "
+     "you as part of the team, soften this to say that"),
     (r"\barchitected\b",
-     "verify against the baseline: did they design the whole system, or build one piece of it?"),
+     "check your baseline (the record of what you actually did) — if you built one "
+     "piece rather than the whole system, soften this to say that"),
     (r"\bspearheaded\b",
-     "verify against the baseline: did they initiate and drive this, or take part in it?"),
+     "check your baseline (the record of what you actually did) — if you took part "
+     "rather than initiated and drove it, soften this to say that"),
 ]
 
 

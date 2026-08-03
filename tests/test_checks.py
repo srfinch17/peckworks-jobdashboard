@@ -143,6 +143,34 @@ def test_inflation_allows_supported_the_pipeline_team():
     assert checks.inflation("supported the pipeline team") == []
 
 
+def test_inflation_allows_a_world_class_employer():
+    assert checks.inflation("worked at a world-class studio") == []
+
+
+def test_inflation_allows_a_world_class_contract_team():
+    assert checks.inflation("contracted for a world-class team") == []
+
+
+def test_inflation_allows_an_award_winning_employer():
+    assert checks.inflation("interned at an award-winning studio") == []
+
+
+def test_inflation_flags_world_class_as_a_self_description():
+    assert checks.inflation("world-class environment artist")
+
+
+def test_inflation_flags_a_world_class_eye():
+    assert checks.inflation("a world-class eye for composition")
+
+
+def test_inflation_flags_unparalleled_attention():
+    assert checks.inflation("unparalleled attention to detail")
+
+
+def test_inflation_flags_i_am_a_world_class_generalist():
+    assert checks.inflation("I am a world-class generalist")
+
+
 LINK_HEAVY = """## Links
 - [ArtStation](https://www.artstation.com/example/portfolio/gallery)
 - [Personal website](https://example.com/portfolio/gallery/index)
