@@ -137,6 +137,75 @@ def test_offers_are_unaffected_by_the_in_flight_fix():
     assert tally2["offers"] == 0
 
 
+# --- the full in_flight acceptance table ---
+
+def _applied(folder="7_Pixar_Emeryville_Modeler"):
+    book, folder = _staged(folder)
+    book, _ = ledger.sync(book, {folder: "applied"}, "2026-01-10")
+    return book, folder
+
+
+def test_an_observed_staged_to_applied_move_is_in_flight():
+    book, _ = _applied()
+    assert ledger.counts(book)["in_flight"] == 1
+
+
+def test_an_interview_on_a_vanished_folder_is_still_in_flight():
+    book, folder = _applied()
+    ledger.set_status(book, folder, "interview_scheduled", "2026-01-15")
+    book, _ = ledger.sync(book, {}, "2026-02-01")
+    tally = ledger.counts(book)
+    assert tally["in_flight"] == 1
+    assert tally["interviews"] == 1
+
+
+def test_an_offer_is_still_in_flight():
+    book, folder = _applied()
+    ledger.set_status(book, folder, "offer", "2026-01-20")
+    tally = ledger.counts(book)
+    assert tally["in_flight"] == 1
+    assert tally["offers"] == 1
+
+
+def test_a_closed_job_is_not_in_flight():
+    book, folder = _applied()
+    ledger.set_status(book, folder, "closed", "2026-02-01", closure_reason="rejected")
+    tally = ledger.counts(book)
+    assert tally["in_flight"] == 0
+    assert tally["rejected"] == 1
+
+
+def test_a_closed_job_whose_folder_vanished_is_not_in_flight():
+    book, folder = _applied()
+    ledger.set_status(book, folder, "closed", "2026-02-01", closure_reason="rejected")
+    book, _ = ledger.sync(book, {}, "2026-03-01")
+    tally = ledger.counts(book)
+    assert tally["in_flight"] == 0
+    assert tally["rejected"] == 1
+
+
+@pytest.mark.parametrize("lane", ["expired", "skipped", "not_applied", "staged"])
+def test_a_job_moved_out_of_the_applied_lane_is_not_in_flight(lane):
+    """The posting expired, or the user filed it away. Nothing is being waited on."""
+    book, folder = _applied()
+    book, _ = ledger.sync(book, {folder: lane}, "2026-02-01")
+    assert book[folder]["status"] == "awaiting"
+    assert ledger.counts(book)["in_flight"] == 0
+
+
+def test_a_job_that_went_missing_then_came_back_staged_is_not_in_flight():
+    book, folder = _applied()
+    book, _ = ledger.sync(book, {}, "2026-02-01")
+    book, _ = ledger.sync(book, {folder: "staged"}, "2026-02-02")
+    assert ledger.counts(book)["in_flight"] == 0
+
+
+def test_set_status_on_a_staged_job_does_not_make_it_in_flight():
+    book, folder = _staged()
+    ledger.set_status(book, folder, "awaiting", "2026-01-20")
+    assert ledger.counts(book)["in_flight"] == 0
+
+
 def test_reason_is_refused_when_not_closing():
     book, folder = _staged()
     with pytest.raises(ValueError, match="only applies"):

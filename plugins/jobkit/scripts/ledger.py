@@ -157,22 +157,21 @@ def counts(book: dict) -> dict:
                 tally[reason] += 1
             continue
 
-        # in_flight/interviews key off "has this job ever been applied to",
-        # not the current lane - symmetric with the closure fix above.
-        # Nothing closed it, so it is still open, even if the folder later
-        # went missing; dropping it out of the count would read as good news
-        # ("one fewer thing to wait on") when nothing actually resolved.
-        #
-        # applied_date is NOT the right signal here: sync() correctly leaves
-        # it unset when a folder is first seen already sitting in the
-        # applied lane (the move was never observed, so the date is
-        # unknown) - but that is still a genuinely applied, in-flight job.
-        # status is the honest signal instead: sync() sets it to "awaiting"
-        # the moment a folder is applied by either path (first-seen or
-        # observed move), and it stays "none" for anything only ever
-        # staged. So "not none, not closed" means "known to be applied and
-        # still open" - true in every case that matters here.
-        if status != "none":
+        # "Waiting to hear back" takes BOTH fields, because neither alone is
+        # enough:
+        #   status != "none"  -> it has been applied to and (the branch above
+        #     already returned for "closed") not closed. But status only ever
+        #     moves forward, so it never decays when the job stops being live.
+        #   lane in (applied, missing) -> it is still somewhere consistent
+        #     with a live application. A folder sitting in expired/skipped/
+        #     not_applied/staged is not being waited on, whatever its stale
+        #     status says. "missing" counts because nothing closed it - the
+        #     folder was just tidied away, and dropping it would read as good
+        #     news ("one fewer thing to wait on") when nothing resolved.
+        # applied_date is deliberately NOT used: sync() leaves it unset when a
+        # folder is first seen already in the applied lane, and that is still
+        # a real open application.
+        if status != "none" and lane in ("applied", "missing"):
             tally["in_flight"] += 1
             if status in ("interview_scheduled", "interviewed"):
                 tally["interviews"] += 1
