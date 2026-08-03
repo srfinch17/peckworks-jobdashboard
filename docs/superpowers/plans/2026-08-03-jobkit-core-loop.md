@@ -939,12 +939,12 @@ def test_set_status_on_a_missing_job_raises():
 
 def test_resolve_returns_every_match_for_the_caller_to_disambiguate():
     book, _ = ledger.sync(
-        {}, {"7_Anduril_CostaMesa_Artist": "staged", "8_Anduril_CostaMesa_Modeler": "staged"},
+        {}, {"7_LumenForge_Portland_Animator": "staged", "8_LumenForge_Portland_Modeler": "staged"},
         "2026-01-05",
     )
-    assert ledger.resolve(book, "anduril") == [
-        "7_Anduril_CostaMesa_Artist",
-        "8_Anduril_CostaMesa_Modeler",
+    assert ledger.resolve(book, "lumenforge") == [
+        "7_LumenForge_Portland_Animator",
+        "8_LumenForge_Portland_Modeler",
     ]
 
 

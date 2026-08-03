@@ -131,12 +131,12 @@ Keyed on **folder name**, with `posting_url` as a secondary identity so a rename
 re-matched rather than orphaned.
 
 ```json
-"7_Disney_LeadSoftwareEngineer": {
+"9_LumenForge_Portland_LeadTechnicalArtist": {
   "lane": "applied",
   "score": 7,
-  "company": "Disney",
-  "role": "Lead Software Engineer",
-  "location": "Burbank, CA",
+  "company": "LumenForge",
+  "role": "Lead Technical Artist",
+  "location": "Portland, OR",
   "posting_url": "https://…",
   "source_site": "greenhouse.io",
   "intermediary": null,

@@ -105,8 +105,3 @@ The request is "get it done today." Honest numbers:
 trying to do all of it tonight is the usual one: three things at 70 percent instead of four at
 100, and nothing Benny can actually open.
 
-**Separate conflict worth naming once:** today is day 1 of the 4-day Cotality sprint, and the
-Wednesday interview is the higher-stakes item by a wide margin. This project is real work, not a
-break. If it eats the day, Saturday's Python foundation and the start of the MCP artifact both
-slip, and Monday's abort gate gets tighter. Evening work after the study block is a clean way to
-have both. Your call, stated once, then dropped.

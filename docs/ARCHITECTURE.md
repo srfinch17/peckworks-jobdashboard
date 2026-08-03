@@ -52,7 +52,7 @@ peckworks-jobdashboard/
 
 Install path for Benny:
 ```
-/plugin marketplace add srfinch17/peckworks-jobdashboard
+/plugin marketplace add <owner>/peckworks-jobdashboard
 /plugin install jobkit
 ```
 Then: "set up my job search in ~/JobSearch".

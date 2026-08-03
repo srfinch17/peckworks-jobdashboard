@@ -121,7 +121,7 @@ job, no manual file editing, and the page opens by double-click with no server r
 
 - [ ] Source-site brand chips on dashboard cards. ⚠️ Shorten an unrecognized host by STRIPPING
       noise subdomains (`careers.`, `jobs.`, `apply.`), never by truncating the tail: chopping
-      `careers.irvinecompany.com` to a fixed width produces `careers.irvinecompany.co`, which
+      `careers.brightpath-studios.com` to a fixed width produces `careers.brightpath-studios.co`, which
       reads as a typo rather than a domain.
 - [ ] Interview / callback tracking sidecar
 - [ ] `jobkit-doctor`: diagnose a broken workspace (missing deps, malformed ledger, orphaned folders)
