@@ -1,0 +1,13 @@
+{
+  "name": "peckworks-jobdashboard",
+  "owner": {
+    "name": "peckworks"
+  },
+  "plugins": [
+    {
+      "name": "jobkit",
+      "source": "./plugins/jobkit",
+      "description": "A job-search workspace you drive by talking to Claude. Paste job links, get tracked folders with tailored materials, and a dashboard that opens by double-click."
+    }
+  ]
+}

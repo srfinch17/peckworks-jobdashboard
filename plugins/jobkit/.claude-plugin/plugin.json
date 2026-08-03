@@ -1,0 +1,8 @@
+{
+  "name": "jobkit",
+  "version": "0.1.0",
+  "description": "Job-search workspace: paste job links, get tracked folders with tailored materials and an offline dashboard.",
+  "author": {
+    "name": "peckworks"
+  }
+}

@@ -9,7 +9,20 @@ Distributed as a **Claude plugin** (works in Claude Code and in Claude Desktop's
 The dashboard is a single self-contained HTML file you open by double-clicking. No server, no
 build step, no internet. It is the visible payoff of the whole thing.
 
-**Status: planning. Nothing is built yet.** Start with `docs/ASSESSMENT.md`.
+**Status: in development.** Design: `docs/superpowers/specs/2026-08-02-jobkit-design.md`.
+Plan: `docs/superpowers/plans/2026-08-03-jobkit-core-loop.md`.
+
+## Contributing
+
+After cloning, re-create the pre-commit guard (git does not version hooks):
+
+```sh
+printf '#!/bin/sh\npython tools/no_personal_data.py || exit 1\n' > .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+```
+
+Then create `tools/forbidden_strings.local.txt` with one forbidden string per line.
+The guard refuses to run without it.
 
 ## Origin
 
