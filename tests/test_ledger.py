@@ -64,6 +64,30 @@ def test_closure_reason_is_rejected_only_for_a_real_rejection():
     assert tally["closed_no_response"] == 1
 
 
+def test_rejected_count_survives_the_folder_vanishing():
+    """A rejection is a historical fact; tidying the folder must not erase it."""
+    book, folder = _staged()
+    book, _ = ledger.sync(book, {folder: "applied"}, "2026-01-10")
+    ledger.set_status(book, folder, "closed", "2026-02-01", closure_reason="rejected")
+    book, _ = ledger.sync(book, {}, "2026-03-01")
+    assert book[folder]["lane"] == "missing"
+    tally = ledger.counts(book)
+    assert tally["rejected"] == 1
+    assert tally["missing"] == 1
+
+
+def test_closed_no_response_count_survives_the_folder_vanishing():
+    """Same guard, other reason - the two must stay distinguishable after cleanup."""
+    book, folder = _staged()
+    book, _ = ledger.sync(book, {folder: "applied"}, "2026-01-10")
+    ledger.set_status(book, folder, "closed", "2026-02-01", closure_reason="closed_no_response")
+    book, _ = ledger.sync(book, {}, "2026-03-01")
+    tally = ledger.counts(book)
+    assert tally["closed_no_response"] == 1
+    assert tally["rejected"] == 0
+    assert tally["missing"] == 1
+
+
 def test_reason_is_refused_when_not_closing():
     book, folder = _staged()
     with pytest.raises(ValueError, match="only applies"):

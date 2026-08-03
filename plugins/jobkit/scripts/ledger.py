@@ -146,19 +146,29 @@ def counts(book: dict) -> dict:
         lane = entry.get("lane", "missing")
         if lane in tally:
             tally[lane] += 1
-        if lane != "applied":
-            continue
+
         status = entry.get("status", "none")
         if status == "closed":
+            # A rejection (or any other closure) is a historical fact. It does
+            # not stop having happened because the folder was later archived
+            # or deleted, so this counts regardless of current lane.
             reason = entry.get("closure_reason")
             if reason in tally:
                 tally[reason] += 1
-        else:
-            tally["in_flight"] += 1
-            if status in ("interview_scheduled", "interviewed"):
-                tally["interviews"] += 1
-            elif status == "offer":
-                tally["offers"] += 1
+            continue
+
+        if lane != "applied":
+            # Still "waiting to hear" only makes sense while the folder is
+            # actually in the applied lane. A vanished folder that was never
+            # closed is not a confirmed in-flight application anymore - it's
+            # unknown, so it is excluded rather than guessed at.
+            continue
+
+        tally["in_flight"] += 1
+        if status in ("interview_scheduled", "interviewed"):
+            tally["interviews"] += 1
+        elif status == "offer":
+            tally["offers"] += 1
     return tally
 
 
