@@ -63,6 +63,98 @@ def test_inflation_allows_hedged_framing():
     assert checks.inflation("Familiar with Houdini") == []
 
 
+def test_inflation_flags_decade_of_experience():
+    assert checks.inflation("over a decade of Houdini experience")
+
+
+def test_inflation_flags_numeric_years_of_experience():
+    assert checks.inflation("10+ years of experience with Unreal")
+
+
+def test_inflation_flags_bare_years_of_work():
+    assert checks.inflation("years of professional Houdini work")
+
+
+def test_inflation_flags_decade_of_professional_experience():
+    assert checks.inflation("a decade of professional experience")
+
+
+def test_inflation_flags_world_class_superlative():
+    assert checks.inflation("world-class environment artist")
+
+
+def test_inflation_flags_unparalleled_superlative():
+    assert checks.inflation("unparalleled attention to detail")
+
+
+def test_inflation_flags_false_authorship_led_the_team():
+    assert checks.inflation("led the team that shipped the environment art")
+
+
+def test_inflation_flags_false_authorship_architected():
+    assert checks.inflation("architected the entire lighting pipeline")
+
+
+def test_inflation_flags_false_authorship_spearheaded():
+    assert checks.inflation("spearheaded the pipeline rewrite")
+
+
+def test_inflation_flags_battle_tested_superlative():
+    assert checks.inflation("battle-tested skills in Substance")
+
+
+def test_inflation_flags_proven_track_record():
+    assert checks.inflation("proven track record of delivering")
+
+
+def test_inflation_flags_highly_skilled_superlative():
+    assert checks.inflation("highly skilled in Maya")
+
+
+def test_inflation_flags_advanced_expertise():
+    assert checks.inflation("advanced expertise in look development")
+
+
+def test_inflation_allows_contributed_to():
+    assert checks.inflation("contributed to the environment pass") == []
+
+
+def test_inflation_allows_worked_on():
+    assert checks.inflation("worked on the backgrounds for the title sequence") == []
+
+
+def test_inflation_allows_a_comparison_to_a_named_piece():
+    assert checks.inflation("similar to the environment work in my Redwood piece") == []
+
+
+def test_inflation_allows_one_of_several_contributors():
+    assert checks.inflation("one of six artists on the crowd system") == []
+
+
+def test_inflation_allows_assisted_with():
+    assert checks.inflation("assisted with the environment pass") == []
+
+
+def test_inflation_allows_helped_build():
+    assert checks.inflation("helped build the pipeline") == []
+
+
+def test_inflation_allows_supported_the_pipeline_team():
+    assert checks.inflation("supported the pipeline team") == []
+
+
+LINK_HEAVY = """## Links
+- [ArtStation](https://www.artstation.com/example/portfolio/gallery)
+- [Personal website](https://example.com/portfolio/gallery/index)
+- [Demo reel](https://vimeo.com/showcase/1234567890)
+- [LinkedIn](https://www.linkedin.com/in/example-profile-name)
+"""
+
+
+def test_envelope_does_not_count_markdown_syntax_and_urls_as_words():
+    assert checks.envelope(LINK_HEAVY, max_words=8, max_sections=6) == []
+
+
 def test_run_all_collects_every_category():
     profile = {
         "banned_phrases": ["self-starter"],

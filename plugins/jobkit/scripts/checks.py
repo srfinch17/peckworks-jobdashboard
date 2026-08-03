@@ -21,13 +21,43 @@ INFLATION_PATTERNS = [
     (r"\bseasoned\b", "unearned tenure"),
     (r"\bveteran\b", "unearned tenure"),
     (r"\bbuilds on your years\b", "a comparison turned into a claim about time"),
+    # possessive-free and numeric time claims: "years of professional work",
+    # "10+ years of", "a decade of" all invent a tenure the baseline may not have.
+    (r"\byears? of\b", "an unearned claim about time"),
+    (r"\bdecades? of\b", "an unearned claim about time"),
+    # superlatives: scale or quality asserted with nothing to back it.
+    (r"\bworld-class\b", "a superlative claim"),
+    (r"\bunparalleled\b", "a superlative claim"),
+    (r"\bbattle-tested\b", "a superlative claim"),
+    (r"\bhighly skilled\b", "a superlative claim"),
+    (r"\badvanced expertise\b", "unearned depth"),
+    (r"\bproven track record\b", "an unearned claim of results"),
+    # authorship verbs: not necessarily false, but the check can't know who did
+    # what, so it flags for the user to confirm against their own baseline.
+    (r"\bled the (?:team|effort|project)\b",
+     "verify against the baseline: did they lead, or take part as one of the team?"),
+    (r"\barchitected\b",
+     "verify against the baseline: did they design the whole system, or build one piece of it?"),
+    (r"\bspearheaded\b",
+     "verify against the baseline: did they initiate and drive this, or take part in it?"),
 ]
+
+
+def _word_count(text: str) -> int:
+    # ponytail: strips the common markdown/URL noise (links, headings, bullets)
+    # before counting; not a markdown parser, just enough to stop syntax from
+    # inflating the word count. Extend if a new syntax shape starts slipping through.
+    stripped = re.sub(r"!?\[([^\]]*)\]\([^)]*\)", r"\1", text)
+    stripped = re.sub(r"https?://\S+", "", stripped)
+    stripped = re.sub(r"^#{1,6}\s+", "", stripped, flags=re.MULTILINE)
+    stripped = re.sub(r"^\s*[-*+]\s+", "", stripped, flags=re.MULTILINE)
+    return len(stripped.split())
 
 
 def envelope(text: str, max_words: int = DEFAULT_MAX_WORDS,
              max_sections: int = DEFAULT_MAX_SECTIONS) -> list:
     problems = []
-    words = len(text.split())
+    words = _word_count(text)
     if words > max_words:
         problems.append(f"too long: {words} words, limit is {max_words}")
     sections = len(re.findall(r"^## (?!#)", text, flags=re.MULTILINE))
