@@ -16,7 +16,6 @@ import sys
 import webbrowser
 from datetime import date
 from pathlib import Path
-from urllib.parse import quote
 
 import ledger
 import workspace
@@ -49,15 +48,21 @@ def _posting_url(root: Path, config: dict, lane: str, folder: str) -> str:
     if not path.exists():
         return ""
     try:
-        first = path.read_text(encoding="utf-8").splitlines()[0].strip()
+        # utf-8-sig strips a leading BOM if present (several Windows editors
+        # write one by default); it is a no-op otherwise. splitlines() already
+        # handles CRLF.
+        first = path.read_text(encoding="utf-8-sig").splitlines()[0].strip()
     except (OSError, IndexError, UnicodeDecodeError):
         return ""
     return first if first.startswith(("http://", "https://")) else ""
 
 
 def _folder_uri(root: Path, config: dict, lane: str, folder: str) -> str:
-    path = workspace.lane_dir(root, config, lane) / folder
-    return "file:///" + quote(str(path).replace("\\", "/").lstrip("/"))
+    # Path.as_uri() over hand-rolled quoting: WHATWG file-URL parsing detects
+    # a Windows drive letter on the RAW "C:" prefix, so a percent-encoded
+    # "C%3A" (what a naive quote() of the whole path produces) is not
+    # recognized as a drive letter and the link fails to resolve.
+    return (workspace.lane_dir(root, config, lane) / folder).as_uri()
 
 
 def build(root, today: str = None) -> str:

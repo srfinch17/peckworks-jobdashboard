@@ -1,3 +1,5 @@
+import re
+
 import dashboard
 import workspace
 
@@ -107,3 +109,67 @@ def test_empty_workspace_renders_without_crashing(tmp_path):
     html = dashboard.build(tmp_path, "2026-02-01")
     assert "<html" in html or "<!doctype" in html.lower()
     assert 'data-count="staged">0<' in html
+
+
+# --- file:// URI must be openable on Windows (WHATWG drive-letter detection
+# keys off the RAW "C:" - a percent-encoded "C%3A" is not recognized) ---
+
+def test_folder_uri_keeps_the_drive_letter_colon_unescaped(tmp_path):
+    _workspace_with_two_jobs(tmp_path)
+    html = dashboard.build(tmp_path, "2026-02-01")
+    assert re.search(r'href="file:///[A-Za-z]:/', html), html
+    assert "%3A" not in html
+
+
+# --- a BOM or CRLF in original_job_posting.md must not silently drop the
+# posting link ---
+
+def test_posting_url_survives_a_byte_order_mark(tmp_path):
+    config = workspace.init(tmp_path)
+    folder = workspace.lane_dir(tmp_path, config, "staged") / "7_Pixar_Emeryville_Modeler"
+    folder.mkdir()
+    (folder / "original_job_posting.md").write_bytes(
+        "https://example.com/job/123\n".encode("utf-8-sig")
+    )
+    html = dashboard.build(tmp_path, "2026-02-01")
+    assert "https://example.com/job/123" in html
+
+
+def test_posting_url_survives_crlf_line_endings(tmp_path):
+    config = workspace.init(tmp_path)
+    folder = workspace.lane_dir(tmp_path, config, "staged") / "7_Pixar_Emeryville_Modeler"
+    folder.mkdir()
+    (folder / "original_job_posting.md").write_bytes(
+        b"https://example.com/job/456\r\nmore notes\r\n"
+    )
+    html = dashboard.build(tmp_path, "2026-02-01")
+    assert "https://example.com/job/456" in html
+
+
+def test_posting_url_is_empty_for_an_empty_file(tmp_path):
+    config = workspace.init(tmp_path)
+    folder = workspace.lane_dir(tmp_path, config, "staged") / "7_Pixar_Emeryville_Modeler"
+    folder.mkdir()
+    (folder / "original_job_posting.md").write_text("", encoding="utf-8")
+    html = dashboard.build(tmp_path, "2026-02-01")
+    assert ">posting<" not in html
+
+
+def test_posting_url_is_empty_when_first_line_is_not_a_url(tmp_path):
+    config = workspace.init(tmp_path)
+    folder = workspace.lane_dir(tmp_path, config, "staged") / "7_Pixar_Emeryville_Modeler"
+    folder.mkdir()
+    (folder / "original_job_posting.md").write_text("Notes about the role\n", encoding="utf-8")
+    html = dashboard.build(tmp_path, "2026-02-01")
+    assert ">posting<" not in html
+
+
+def test_posting_url_refuses_a_javascript_scheme(tmp_path):
+    """Injection guard: only http(s) links are ever emitted as the posting link."""
+    config = workspace.init(tmp_path)
+    folder = workspace.lane_dir(tmp_path, config, "staged") / "7_Pixar_Emeryville_Modeler"
+    folder.mkdir()
+    (folder / "original_job_posting.md").write_text("javascript:alert(1)\n", encoding="utf-8")
+    html = dashboard.build(tmp_path, "2026-02-01")
+    assert "javascript:" not in html
+    assert ">posting<" not in html
