@@ -157,17 +157,22 @@ def counts(book: dict) -> dict:
                 tally[reason] += 1
             continue
 
-        if lane != "applied":
-            # Still "waiting to hear" only makes sense while the folder is
-            # actually in the applied lane. A vanished folder that was never
-            # closed is not a confirmed in-flight application anymore - it's
-            # unknown, so it is excluded rather than guessed at.
-            continue
+        # in_flight/interviews key off "has this job ever been applied to",
+        # not the current lane - symmetric with the closure fix above.
+        # Nothing closed it, so it is still open, even if the folder later
+        # went missing; dropping it out of the count would read as good news
+        # ("one fewer thing to wait on") when nothing actually resolved.
+        # applied_date is only ever set once, by an observed move into the
+        # applied lane, and is never cleared - so it can't be gamed by
+        # moving a folder back to "staged", unlike lane itself.
+        if "applied_date" in entry:
+            tally["in_flight"] += 1
+            if status in ("interview_scheduled", "interviewed"):
+                tally["interviews"] += 1
 
-        tally["in_flight"] += 1
-        if status in ("interview_scheduled", "interviewed"):
-            tally["interviews"] += 1
-        elif status == "offer":
+        # offers stays gated on current lane == "applied" - confirmed
+        # correct by the reviewer, left untouched by the in_flight fix.
+        if lane == "applied" and status == "offer":
             tally["offers"] += 1
     return tally
 

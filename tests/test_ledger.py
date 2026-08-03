@@ -88,6 +88,45 @@ def test_closed_no_response_count_survives_the_folder_vanishing():
     assert tally["missing"] == 1
 
 
+def test_in_flight_survives_the_folder_vanishing():
+    """Nothing resolved just because the folder went missing - it's still open."""
+    book, folder = _staged()
+    book, _ = ledger.sync(book, {folder: "applied"}, "2026-01-10")
+    book, _ = ledger.sync(book, {}, "2026-02-01")
+    tally = ledger.counts(book)
+    assert tally["in_flight"] == 1
+
+
+def test_interviews_survives_the_folder_vanishing():
+    book, folder = _staged()
+    book, _ = ledger.sync(book, {folder: "applied"}, "2026-01-10")
+    ledger.set_status(book, folder, "interview_scheduled", "2026-01-15")
+    book, _ = ledger.sync(book, {}, "2026-02-01")
+    tally = ledger.counts(book)
+    assert tally["interviews"] == 1
+
+
+def test_a_never_applied_staged_job_is_not_in_flight():
+    book, folder = _staged()
+    tally = ledger.counts(book)
+    assert tally["in_flight"] == 0
+
+
+def test_offers_are_unaffected_by_the_in_flight_fix():
+    book, folder = _staged()
+    book, _ = ledger.sync(book, {folder: "applied"}, "2026-01-10")
+    ledger.set_status(book, folder, "offer", "2026-01-20")
+    tally = ledger.counts(book)
+    assert tally["offers"] == 1
+
+    book2, folder2 = _staged("9_Other_Studio_Job")
+    book2, _ = ledger.sync(book2, {folder2: "applied"}, "2026-01-10")
+    ledger.set_status(book2, folder2, "offer", "2026-01-20")
+    book2, _ = ledger.sync(book2, {}, "2026-02-01")
+    tally2 = ledger.counts(book2)
+    assert tally2["offers"] == 0
+
+
 def test_reason_is_refused_when_not_closing():
     book, folder = _staged()
     with pytest.raises(ValueError, match="only applies"):
