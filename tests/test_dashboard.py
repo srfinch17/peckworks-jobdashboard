@@ -285,6 +285,104 @@ def test_posting_url_refuses_a_javascript_scheme(tmp_path):
     assert ">posting<" not in html
 
 
+# --- library: categories, icons, filter toolbar, read tracking ---
+
+def test_guide_with_declared_meta_uses_them(tmp_path):
+    workspace.init(tmp_path)
+    guides = tmp_path / "guides"
+    (guides / "craft.html").write_text(
+        '<html><head><title>Color Theory</title>'
+        '<meta name="jobkit-category" content="Craft">'
+        '<meta name="jobkit-icon" content="palette"></head><body></body></html>',
+        encoding="utf-8",
+    )
+    html_doc = dashboard.build(tmp_path, "2026-02-01")
+    assert 'data-category="Craft"' in html_doc
+
+
+def test_guide_without_meta_infers_category_from_title(tmp_path):
+    workspace.init(tmp_path)
+    guides = tmp_path / "guides"
+    (guides / "portfolio.html").write_text(
+        '<html><head><title>Building Your Portfolio Reel</title></head><body></body></html>',
+        encoding="utf-8",
+    )
+    html_doc = dashboard.build(tmp_path, "2026-02-01")
+    assert 'data-category="Career"' in html_doc
+
+
+def test_guide_with_unmatched_title_falls_back_to_guides_category(tmp_path):
+    workspace.init(tmp_path)
+    guides = tmp_path / "guides"
+    (guides / "misc.html").write_text(
+        '<html><head><title>Zzyzx Notes</title></head><body></body></html>',
+        encoding="utf-8",
+    )
+    html_doc = dashboard.build(tmp_path, "2026-02-01")
+    assert 'data-category="Guides"' in html_doc
+
+
+def test_hostile_title_is_escaped_in_card_and_filter_data(tmp_path):
+    workspace.init(tmp_path)
+    guides = tmp_path / "guides"
+    (guides / "hostile.html").write_text(
+        '<html><head><title>R&D <script>alert(1)</script> Craft</title></head><body></body></html>',
+        encoding="utf-8",
+    )
+    html_doc = dashboard.build(tmp_path, "2026-02-01")
+    assert "<script>alert(1)</script>" not in html_doc
+    assert "R&amp;D" in html_doc
+
+
+def test_library_toolbar_has_search_input_and_category_chips(tmp_path):
+    workspace.init(tmp_path)
+    guides = tmp_path / "guides"
+    (guides / "craft.html").write_text(
+        '<html><head><title>Color Theory</title>'
+        '<meta name="jobkit-category" content="Craft"></head><body></body></html>',
+        encoding="utf-8",
+    )
+    html_doc = dashboard.build(tmp_path, "2026-02-01")
+    lib_section = _section_html(html_doc, "library")
+    assert 'id="libq"' in lib_section
+    assert 'data-chip="Craft"' in lib_section
+    assert 'data-chip="All"' in lib_section
+
+
+def test_reading_stats_off_skips_harvest_and_no_read_state(tmp_path, monkeypatch):
+    config = workspace.init(tmp_path)
+    import json
+    cfg = json.loads((tmp_path / "jobkit.json").read_text(encoding="utf-8"))
+    cfg["features"]["reading_stats"] = False
+    (tmp_path / "jobkit.json").write_text(json.dumps(cfg), encoding="utf-8")
+    guides = tmp_path / "guides"
+    (guides / "craft.html").write_text(
+        '<html><head><title>Color Theory</title></head><body></body></html>', encoding="utf-8"
+    )
+
+    called = []
+    monkeypatch.setattr("reading_stats.harvest", lambda root: called.append(root) or {"pages": {}})
+    html_doc = dashboard.build(tmp_path, "2026-02-01")
+    assert called == []
+    assert "unread" not in html_doc.lower() or 'data-read="0"' not in html_doc
+
+
+def test_reading_stats_on_shows_read_state_from_json(tmp_path, monkeypatch):
+    workspace.init(tmp_path)
+    guides = tmp_path / "guides"
+    (guides / "craft.html").write_text(
+        '<html><head><title>Color Theory</title></head><body></body></html>', encoding="utf-8"
+    )
+    monkeypatch.setattr(
+        "reading_stats.harvest",
+        lambda root: {"watermark": 1, "daily": {},
+                       "pages": {"craft.html": {"opens": 3, "first": "2026-01-01", "last": "2026-01-20"}}},
+    )
+    html_doc = dashboard.build(tmp_path, "2026-02-01")
+    lib_section = _section_html(html_doc, "library")
+    assert "2026-01-20" in lib_section
+
+
 def test_humanize_keeps_runs_of_capitals_and_digits_together():
     """A naive lower-or-digit -> upper split turns 3DGeneralist into "3 DGeneralist"."""
     assert dashboard._humanize("3DGeneralist") == "3D Generalist"

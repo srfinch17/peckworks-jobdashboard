@@ -18,6 +18,7 @@ from datetime import date
 from pathlib import Path
 
 import ledger
+import reading_stats
 import workspace
 
 FOLDER_RE = re.compile(r"^(\d+)_([^_]+)_([^_]+)_(.+)$")
@@ -85,12 +86,42 @@ _DESC_RE = re.compile(
 )
 
 
+def _meta_re(name: str) -> re.Pattern:
+    return re.compile(
+        rf'<meta\s+(?:name=["\']{name}["\']\s+content=["\'](?P<c1>.*?)["\']'
+        rf'|content=["\'](?P<c2>.*?)["\']\s+name=["\']{name}["\'])',
+        re.IGNORECASE | re.DOTALL,
+    )
+
+
+_CATEGORY_RE = _meta_re("jobkit-category")
+_ICON_RE = _meta_re("jobkit-icon")
+
+# Guide authors can declare category/icon explicitly via meta tags; when they
+# don't, this short keyword table infers both from the title. A nicety, not
+# a classifier, so keep it short - anything unmatched falls back to "Guides".
+_CATEGORY_KEYWORDS = [
+    (("colour", "color", "light", "composition", "design"), "Craft", "palette"),
+    (("photo", "camera", "shoot", "lighting"), "Craft", "camera"),
+    (("portfolio", "reel", "resume", "interview", "career", "negotiat"), "Career", "users"),
+    (("python", "javascript", "software", "code", "sql", "git", "tool"), "Tools", "wrench"),
+]
+
+
+def _infer_category(title: str) -> tuple:
+    lowered = title.lower()
+    for keywords, category, icon in _CATEGORY_KEYWORDS:
+        if any(k in lowered for k in keywords):
+            return category, icon
+    return "Guides", "book"
+
+
 def _clean(text: str) -> str:
     return re.sub(r"\s+", " ", html.unescape(text)).strip()
 
 
 def scan_guides(guides_dir: Path) -> list:
-    """Return [{name, title, desc, href}, ...] for every guides/*.html file."""
+    """Return [{name, title, desc, href, category, icon}, ...] for guides/*.html."""
     if not guides_dir.is_dir():
         return []
     items = []
@@ -101,13 +132,26 @@ def scan_guides(guides_dir: Path) -> list:
             continue
         title_match = _TITLE_RE.search(text)
         title = _clean(title_match.group(1)) if title_match else ""
+        title = title or path.stem
         desc_match = _DESC_RE.search(text)
         desc = _clean(desc_match.group("c1") or desc_match.group("c2")) if desc_match else ""
+
+        cat_match = _CATEGORY_RE.search(text)
+        category = _clean(cat_match.group("c1") or cat_match.group("c2")) if cat_match else ""
+        icon_match = _ICON_RE.search(text)
+        icon = _clean(icon_match.group("c1") or icon_match.group("c2")) if icon_match else ""
+        if not category or not icon:
+            inferred_cat, inferred_icon = _infer_category(title)
+            category = category or inferred_cat
+            icon = icon or inferred_icon
+
         items.append({
             "name": path.stem,
-            "title": title or path.stem,
+            "title": title,
             "desc": desc,
             "href": f"guides/{path.name}",
+            "category": category,
+            "icon": icon,
         })
     return items
 
@@ -176,6 +220,10 @@ def build(root, today: str = None) -> str:
     interviews.sort(key=lambda c: c["applied_date"] or "", reverse=True)
     closed.sort(key=lambda c: c["company"])
 
+    read_pages = {}
+    if config.get("features", {}).get("reading_stats", True):
+        read_pages = reading_stats.harvest(root).get("pages", {})
+
     return render({
         "today": today,
         "counts": ledger.counts(book),
@@ -185,6 +233,7 @@ def build(root, today: str = None) -> str:
         "interviews": interviews,
         "closed": closed,
         "library": scan_guides(root / "guides"),
+        "read_pages": read_pages,
     })
 
 
@@ -320,6 +369,18 @@ PAGE_CSS = THEME_VARS + """
     background:color-mix(in srgb,var(--deny) 10%,transparent);}
   a.chip{transition:color .15s, border-color .15s;}
   a.chip:hover{color:var(--text); border-color:var(--pa);}
+  /* library: filter toolbar (search + category chips) */
+  .libtools{display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:14px 0 4px;}
+  .libtools .libsearch{max-width:320px;}
+  .chips{display:flex; flex-wrap:wrap; gap:7px;}
+  .chip{font-family:"IBM Plex Mono",monospace; cursor:default;}
+  button.chip{cursor:pointer; background:var(--ink-2); transition:color .14s, background .14s, border-color .14s;}
+  button.chip:hover{color:var(--text); border-color:color-mix(in srgb,var(--pa) 55%,var(--muted-2));}
+  button.chip.active{color:var(--ink); background:var(--pa); border-color:var(--pa);}
+  button.chip .cn{opacity:.62; margin-left:6px; font-weight:500;}
+  button.chip.active .cn{opacity:.82;}
+  .nores{display:none; font-family:"IBM Plex Mono",monospace; font-size:.85rem; color:var(--muted);
+    padding:22px 4px; text-align:center;}
   /* library cards */
   .cards{display:grid; grid-template-columns:repeat(auto-fill,minmax(236px,1fr)); gap:12px; margin-top:14px;}
   .gcard{display:flex; flex-direction:column; gap:6px; border:1px solid var(--line); border-left:3px solid var(--pa);
@@ -328,7 +389,13 @@ PAGE_CSS = THEME_VARS + """
   .gcard:hover{transform:translateY(-2px); background:var(--ink-3);
     border-color:color-mix(in srgb,var(--pa) 60%,transparent);
     box-shadow:0 12px 24px -18px color-mix(in srgb,var(--pa) 90%,#000);}
-  .gbadge{align-self:flex-start; font-family:"IBM Plex Mono",monospace; font-size:.58rem; font-weight:600;
+  .gcard-read{background:color-mix(in srgb,var(--have) 6%,var(--ink-2));
+    border-left-color:var(--have);}
+  .gread{font-family:"IBM Plex Mono",monospace; font-size:.62rem; margin-top:2px;}
+  .gread.read{color:var(--have);}
+  .gread.unread{color:var(--muted-2);}
+  .gbadge{align-self:flex-start; display:inline-flex; align-items:center; gap:5px;
+    font-family:"IBM Plex Mono",monospace; font-size:.58rem; font-weight:600;
     letter-spacing:.08em; padding:3px 8px; border-radius:6px; color:var(--pa);
     border:1px solid color-mix(in srgb,var(--pa) 45%,transparent); background:color-mix(in srgb,var(--pa) 12%,transparent);}
   .gname{font-family:"Space Grotesk",sans-serif; font-weight:600; font-size:.95rem; line-height:1.25;}
@@ -338,8 +405,13 @@ PAGE_CSS = THEME_VARS + """
 
 
 def _icon(name: str, size: int = 18) -> str:
-    """Small lucide-style stroke icon. Color follows currentColor."""
-    paths = _ICON_PATHS[name]
+    """Small lucide-style stroke icon. Color follows currentColor.
+
+    An unknown name falls back to the generic "book" icon rather than
+    rendering nothing - a guide author can mistype jobkit-icon and still get
+    a card, not a blank square.
+    """
+    paths = _ICON_PATHS.get(name, _ICON_PATHS["book"])
     return (f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" '
             f'stroke="currentColor" stroke-width="1.8" stroke-linecap="round" '
             f'stroke-linejoin="round" aria-hidden="true">{paths}</svg>')
@@ -356,6 +428,16 @@ _ICON_PATHS = {
     "cap": '<path d="M12 4 2.5 9l9.5 5 9.5-5-9.5-5Z"/>'
            '<path d="M6.5 11.5V17c0 1.5 2.5 3 5.5 3s5.5-1.5 5.5-3v-5.5"/><path d="M21.5 9v6"/>',
     "search": '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
+    # per-guide topic icons, chosen by category/keyword (see _infer_category)
+    "palette": '<path d="M12 3a9 8 0 1 0 0 16c1 0 1.6-.5 1.6-1.3 0-.6-.4-1-.4-1.6 0-.7.5-1.1 1.2-1.1H16a4 4 0 0 0 4-4c0-4.4-3.6-8-8-8Z"/>'
+               '<circle cx="7.5" cy="11" r="1"/><circle cx="10.5" cy="7.5" r="1"/><circle cx="15" cy="8" r="1"/>',
+    "camera": '<path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/>'
+              '<circle cx="12" cy="13.5" r="3.5"/>',
+    "book": '<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15.5H6.5A2.5 2.5 0 0 0 4 21V5.5Z"/><path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H20"/>',
+    "wrench": '<path d="M14.5 6.5a4 4 0 0 0-5.4 4.9L4 16.5 7.5 20l5.1-5.1a4 4 0 0 0 4.9-5.4l-2.7 2.7-2.2-2.2Z"/>',
+    "users": '<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 2.7-5.5 6-5.5s6 2.5 6 5.5"/>'
+             '<circle cx="17" cy="8.5" r="2.3"/><path d="M15.5 14.5c2.6.4 4.5 2.6 4.5 5.5"/>',
+    "sparkles": '<path d="M11 3 12.4 8 17 9.4 12.4 10.8 11 15.8 9.6 10.8 5 9.4 9.6 8Z"/><path d="M18 15l.9 2.6 2.6.9-2.6.9L18 22l-.9-2.6-2.6-.9 2.6-.9Z"/>',
 }
 
 
@@ -392,7 +474,7 @@ def render(context: dict) -> str:
         _section(ready_label, context["staged"], "staged", "p-ready", "layers"),
         _section(inflight_label, context["active"], "active", "p-active", "clock"),
         _section("Closed", context["closed"], "closed", "p-closed", "archive"),
-        _library_section(context["library"]),
+        _library_section(context["library"], context["read_pages"]),
     ])
 
     return f"""<!doctype html>
@@ -512,27 +594,86 @@ def _card(c: dict, section: str) -> str:
     )
 
 
-def _library_section(guides: list) -> str:
+def _read_badge(page_stats: dict) -> str:
+    if not page_stats:
+        return '<span class="gread unread">unread</span>'
+    opens = page_stats.get("opens", 0)
+    last = html.escape(str(page_stats.get("last", "")))
+    return f'<span class="gread read">{opens}&times; &middot; last {last}</span>'
+
+
+def _library_toolbar(categories: list) -> str:
+    chips = ['<button type="button" class="chip active" data-chip="All">All'
+             f'<span class="cn">{sum(n for _, n in categories)}</span></button>']
+    for name, count in categories:
+        chips.append(
+            f'<button type="button" class="chip" data-chip="{html.escape(name, quote=True)}">'
+            f'{html.escape(name)}<span class="cn">{count}</span></button>'
+        )
+    return (
+        '<div class="libtools">'
+        '<div class="libsearch">' + _icon("search") +
+        '<input id="libq" type="search" placeholder="Filter guides by title or description" '
+        'aria-label="Filter guides"></div>'
+        f'<div class="chips">{"".join(chips)}</div></div>'
+    )
+
+
+def _library_section(guides: list, read_pages: dict) -> str:
     if not guides:
         body = ('<div class="empty">No guides yet. Drop an HTML file into '
                  '<span class="mono">guides/</span> and it will show up here.</div>')
     else:
+        counts: dict = {}
+        for g in guides:
+            counts[g["category"]] = counts.get(g["category"], 0) + 1
+        categories = sorted(counts.items())
+
         cards = []
         for g in guides:
             title = html.escape(g["title"])
             href = html.escape(g["href"], quote=True)
+            category = html.escape(g["category"], quote=True)
+            search = html.escape(f"{g['title']} {g['desc']}".lower(), quote=True)
             desc_html = f'<div class="gdesc">{html.escape(g["desc"])}</div>' if g["desc"] else ""
+            page_stats = read_pages.get(g["name"].lower() + ".html") or read_pages.get(g["name"].lower())
+            read_cls = " gcard-read" if page_stats else ""
             cards.append(
-                f'<a class="gcard" href="{href}">'
-                f'<span class="gbadge">Guide</span>'
-                f'<div class="gname">{title}</div>{desc_html}</a>'
+                f'<a class="gcard{read_cls}" href="{href}" data-category="{category}" data-search="{search}">'
+                f'<span class="gbadge">{_icon(g["icon"], 16)} {html.escape(g["category"])}</span>'
+                f'<div class="gname">{title}</div>{desc_html}{_read_badge(page_stats)}</a>'
             )
-        body = f'<div class="cards">{"".join(cards)}</div>'
+        body = (_library_toolbar(categories) +
+                f'<div class="cards">{"".join(cards)}</div>'
+                '<div class="nores">No guides match.</div>')
     return (
         '<section class="panel p-lib" id="library">'
         f'<div class="phead"><span class="picon">{_icon("cap")}</span><h2>Library</h2>'
         f'<div class="rule"></div><span class="pcount">{len(guides)}</span></div>'
         f'{body}</section>'
+        '<script>(function(){'
+        'var q=document.getElementById("libq"); if(!q) return;'
+        'var chips=document.querySelectorAll("#library .chip");'
+        'var cards=document.querySelectorAll("#library .gcard");'
+        'var nores=document.querySelector("#library .nores");'
+        'var active="All";'
+        'function apply(){'
+        'var needle=q.value.toLowerCase(); var shown=0;'
+        'cards.forEach(function(c){'
+        'var matchCat = active==="All" || c.dataset.category===active;'
+        'var matchQ = c.dataset.search.indexOf(needle)!==-1;'
+        'var show = matchCat && matchQ;'
+        'c.style.display = show ? "" : "none";'
+        'if(show) shown++;'
+        '});'
+        'nores.style.display = shown===0 ? "" : "none";'
+        '}'
+        'chips.forEach(function(ch){ch.addEventListener("click",function(){'
+        'chips.forEach(function(x){x.classList.remove("active");});'
+        'ch.classList.add("active"); active=ch.dataset.chip; apply();'
+        '});});'
+        'q.addEventListener("input",apply);'
+        '})();</script>'
     )
 
 
