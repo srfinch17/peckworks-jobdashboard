@@ -389,3 +389,35 @@ def test_humanize_keeps_runs_of_capitals_and_digits_together():
     assert dashboard._humanize("SeniorVFXArtist") == "Senior VFX Artist"
     assert dashboard._humanize("AIEngineer") == "AI Engineer"
     assert dashboard._humanize("LookDevArtist") == "Look Dev Artist"
+
+
+# --- main() error handling: no raw tracebacks for a first-time user ---
+
+def test_main_on_a_path_that_does_not_exist_names_the_path(tmp_path, capsys):
+    missing = tmp_path / "does_not_exist_here"
+    code = dashboard.main([str(missing), "--no-open"])
+    out = capsys.readouterr().out
+    assert code == 2
+    assert str(missing) in out
+
+
+def test_main_on_a_directory_with_no_jobkit_json_mentions_setup(tmp_path, capsys):
+    code = dashboard.main([str(tmp_path), "--no-open"])
+    out = capsys.readouterr().out
+    assert code == 2
+    assert "setup" in out.lower()
+
+
+def test_main_on_a_malformed_jobkit_json_says_config_unreadable(tmp_path, capsys):
+    (tmp_path / "jobkit.json").write_text("{not valid json", encoding="utf-8")
+    code = dashboard.main([str(tmp_path), "--no-open"])
+    out = capsys.readouterr().out
+    assert code == 2
+    assert "config" in out.lower()
+
+
+def test_main_on_an_initialized_workspace_still_writes_the_dashboard(tmp_path, capsys):
+    workspace.init(tmp_path)
+    code = dashboard.main([str(tmp_path), "--no-open"])
+    assert code == 0
+    assert (tmp_path / "CareerDashboard.html").exists()

@@ -11,6 +11,7 @@ Usage:
   python dashboard.py <workspace-path> [--no-open]
 """
 import html
+import json
 import re
 import sys
 import webbrowser
@@ -683,6 +684,19 @@ def main(argv: list) -> int:
         print("Usage: python dashboard.py <workspace-path> [--no-open]")
         return 1
     root = Path(args[0]).expanduser().resolve()
+
+    if not root.exists():
+        print(f"No such path: {root}")
+        return 2
+    if not (root / "jobkit.json").exists():
+        print(f"No JobKit workspace at {root} (no jobkit.json). Run setup first.")
+        return 2
+    try:
+        workspace.load_config(root)
+    except (ValueError, json.JSONDecodeError) as exc:
+        print(f"Config at {root} is unreadable: {exc}")
+        return 2
+
     out = root / "CareerDashboard.html"
     out.write_text(build(root), encoding="utf-8")
     print(f"Dashboard -> {out}")
