@@ -26,70 +26,89 @@ Goal: Benny points Claude at a folder, answers questions, pastes one job link, a
 folder with real materials and a dashboard that shows it. Text files only.
 
 ### v0.1 Scaffold
-- [ ] `marketplace.json`, `plugin.json`, directory skeleton
-- [ ] `templates/workspace/` with the directory structure and starter `site_recipes.md`
+- [x] `marketplace.json`, `plugin.json`, directory skeleton
+- [x] `templates/workspace/` with the directory structure and starter `site_recipes.md`
+      (built by `workspace.init`, not a static template dir: lane folders, `guides/`,
+      `Baseline/`, starter `CLAUDE.md`, starter `intake_site_recipes.md` — same result)
 
 ### v0.2 `jobkit-setup` skill
 The onboarding interview. This is the most important skill in the product because it produces the
 data everything else runs on.
-- [ ] Ask for and store the workspace path; create the structure; never write outside it
-- [ ] Interview to `profile.json`: name, contact, location + relocation policy, target roles,
+- [x] Ask for and store the workspace path; create the structure; never write outside it
+      (`workspace.safe_join`, exercised by `test_nothing_written_outside_the_workspace`)
+- [x] Interview to `profile.json`: name, contact, location + relocation policy, target roles,
       what an application consists of in their field, style rules and banned phrases
-- [ ] Interview to `baseline/`: for an artist, the **portfolio inventory** (per piece: title,
+- [x] Interview to `baseline/`: for an artist, the **portfolio inventory** (per piece: title,
       link, medium, software, their specific role, year, client vs personal, tags); plus any
       employment history and education
-- [ ] Environment check: Python 3, `python-docx`, `reportlab`, browser MCP availability. Report
+- [x] Environment check: Python 3, `python-docx`, `reportlab`, browser MCP availability. Report
       what is present, what is missing, and the exact command to fix each. Never hard-fail.
-- [ ] Write `jobkit.json`
+- [x] Write `jobkit.json`
 
 **Design rule:** the interview must be resumable and must never invent an answer. Unknown stays
 unknown, exactly like the source workspace refuses to fabricate an application date.
 
 ### v0.3 `job-intake` skill
-- [ ] Accept a pasted URL, pasted text, or both
-- [ ] Tier the extraction (pasted text, then public ATS JSON, then browser) and SAY which tier ran
-- [ ] On a login or captcha wall: stop, name the site and the action needed, wait. Never return a
+- [x] Accept a pasted URL, pasted text, or both
+- [x] Tier the extraction (pasted text, then public ATS JSON, then browser) and SAY which tier ran
+- [x] On a login or captcha wall: stop, name the site and the action needed, wait. Never return a
       wall as if it were content.
-- [ ] Create `applications/staging/<slug>/` containing `posting.md` (source URL on line 1),
-      `posting_raw.md` (verbatim), and `notes.md`
-- [ ] Flag a suspected intermediary (agency, staffing firm, aggregator, content mill) in the same
+- [x] Create the staged-lane job folder containing `original_job_posting.md` (source URL on
+      line 1) and `note.md` (the plan's `applications/staging/<slug>/posting.md` /
+      `posting_raw.md` / `notes.md` layout was superseded by this simpler two-file shape)
+- [x] Flag a suspected intermediary (agency, staffing firm, aggregator, content mill) in the same
       breath as the job itself, never below the fold
-- [ ] Append or update `site_recipes.md` with what worked
+- [x] Append or update `site_recipes.md` with what worked
 
 ### v0.4 `build-application` skill
-- [ ] Read `profile.json` + `baseline/` + the posting
 - [ ] **Piece selection** (the artist-critical feature): rank portfolio pieces against the posting,
       propose the lead 6 to 10 with a one-line reason each, write `portfolio_selection.md`
-- [ ] Tailored resume `.txt` against the baseline only, never inventing experience
-- [ ] Short cover letter / intro `.txt`, plain and brief
-- [ ] **Competence-inflation check on every draft.** Framing defaults DOWN: a thin baseline entry
+      (not present in the current skill; resume selection/ordering is, a dedicated
+      `portfolio_selection.md` writeup is not)
+- [x] Read `profile.json` + `baseline/` + the posting
+- [x] Tailored resume `.txt` against the baseline only, never inventing experience
+- [x] Short cover letter / intro `.txt`, plain and brief (off by default, written on request)
+- [x] **Competence-inflation check on every draft.** Framing defaults DOWN: a thin baseline entry
       becomes "familiar with," never "extensive experience in." Grep for the sentence shape where a
       comparison becomes a claim. **For an artist the sharpest case is role attribution: if the
       inventory says he did backgrounds, no draft may imply he did the whole piece.**
-      `LESSONS_HARVEST.md` item 27.
-- [ ] Envelope check before writing: length, section count. Refuse and report if outside.
-- [ ] Style check against the user's banned-phrase list from `profile.json`
+      `LESSONS_HARVEST.md` item 27. (`checks.py`, unit-tested in `tests/test_checks.py`)
+- [x] Envelope check before writing: length, section count. Refuse and report if outside.
+      (`checks.py` envelope check, run via `check_document.py`)
+- [x] Style check against the user's banned-phrase list from `profile.json`
 
 ### v0.5 `refresh-dashboard` script and skill
 The visible payoff of the whole product. Treat it as a feature, not a report. See
 `ARCHITECTURE.md` section 6 for the full spec.
-- [ ] Scan the workspace, read the ledger, emit ONE self-contained `dashboard.html`
-- [ ] **Bake all data into the markup at generation time.** A `file://` page cannot `fetch()` a
+- [x] Scan the workspace, read the ledger, emit ONE self-contained `dashboard.html`
+- [x] **Bake all data into the markup at generation time.** A `file://` page cannot `fetch()` a
       local JSON file; it fails silently and looks like an empty dashboard. This is the single
       constraint most likely to burn an afternoon if forgotten.
-- [ ] Inline CSS, inline SVG, vanilla JS only. No server, no build step, no npm, no CDN for
+- [x] Inline CSS, inline SVG, vanilla JS only. No server, no build step, no npm, no CDN for
       anything load-bearing. Fonts degrade to `system-ui`.
-- [ ] Pipeline counts, staging lane, sent lane, per-job cards
-- [ ] Every card links to its job folder via `file://` so one click opens the materials
-- [ ] Dark theme that actually looks good. This is the thing Benny will show people.
-- [ ] `webbrowser.open()` it on completion AND print the path for bookmarking
-- [ ] Vocabulary comes from `jobkit.json` so it reads correctly for a non-engineer
-- [ ] Reserve a layout slot for a future library section so adding it is not a redesign
-- [ ] Every state-changing skill re-runs this at the end of its turn. A stale dashboard gets
+- [x] Pipeline counts, staging lane, sent lane, per-job cards
+- [x] Every card links to its job folder via `file://` so one click opens the materials
+- [x] Dark theme that actually looks good. This is the thing Benny will show people.
+- [x] `webbrowser.open()` it on completion AND print the path for bookmarking
+- [x] Vocabulary comes from `jobkit.json` so it reads correctly for a non-engineer
+- [x] Reserve a layout slot for a future library section so adding it is not a redesign
+      (built further than "reserved": the library section is live, reading from `guides/`)
+- [x] Every state-changing skill re-runs this at the end of its turn. A stale dashboard gets
       trusted, which is worse than no dashboard.
 
 **v0 done when:** empty folder to a dashboard card you can click through to the materials, one
 job, no manual file editing, and the page opens by double-click with no server running.
+
+Confirmed end-to-end on code paths (`tests/test_end_to_end.py`, all against directories that did
+not exist when the test started) and via a real command-line invocation of `dashboard.py` and
+`check_document.py` from a system temp directory (Task 10, Session 1). **Not yet confirmed:** the
+live Claude Desktop walkthrough (brief step 4) — that requires a human driving Claude and is not
+done by this task.
+
+**Genuine bug found, not fixed (see `task-10-report.md`):** `dashboard.py`, run as a CLI script
+against a workspace path that was never initialized with `workspace.init` (no `jobkit.json`
+yet), exits 1 via an unhandled `FileNotFoundError` traceback rather than a clean usage-style
+error message.
 
 ---
 
