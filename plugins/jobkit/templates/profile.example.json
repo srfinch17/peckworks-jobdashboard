@@ -1,0 +1,21 @@
+{
+  "name": "",
+  "email": "you@example.com",
+  "phone": "",
+  "portfolio_urls": [],
+  "home_location": "",
+  "relocation": "",
+  "remote_preference": "",
+  "target_roles": [],
+  "must_haves": [],
+  "deal_breakers": [],
+  "banned_phrases": [],
+  "envelope": {
+    "max_words": 700,
+    "max_sections": 8
+  },
+  "scoring": {
+    "threshold": 6,
+    "rubric": []
+  }
+}
