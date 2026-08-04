@@ -38,7 +38,13 @@ def parse_folder(name: str) -> dict:
 
 
 def _humanize(token: str) -> str:
+    # Two splits, so runs of capitals stay whole:
+    #   lower -> upper           "LookDev"      -> "Look Dev"
+    #   caps-run -> Titlecase    "3DGeneralist" -> "3D Generalist"
+    #                            "VFXArtist"    -> "VFX Artist"
+    # Without the second rule a naive digit->upper split gives "3 DGeneralist".
     spaced = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", token)
+    spaced = re.sub(r"(?<=[A-Z0-9])(?=[A-Z][a-z])", " ", spaced)
     return spaced.replace("-", " ").strip()
 
 
@@ -415,7 +421,7 @@ def render(context: dict) -> str:
     </div>
   </div>
   {sections}
-  <footer>JobKit dashboard, generated locally. No data leaves this file.</footer>
+  <footer>Peckworks JobKit, generated locally. No data leaves this file.</footer>
 </div>
 <script>
 const q = document.getElementById('q');

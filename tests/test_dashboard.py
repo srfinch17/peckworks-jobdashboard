@@ -283,3 +283,11 @@ def test_posting_url_refuses_a_javascript_scheme(tmp_path):
     html = dashboard.build(tmp_path, "2026-02-01")
     assert "javascript:" not in html
     assert ">posting<" not in html
+
+
+def test_humanize_keeps_runs_of_capitals_and_digits_together():
+    """A naive lower-or-digit -> upper split turns 3DGeneralist into "3 DGeneralist"."""
+    assert dashboard._humanize("3DGeneralist") == "3D Generalist"
+    assert dashboard._humanize("SeniorVFXArtist") == "Senior VFX Artist"
+    assert dashboard._humanize("AIEngineer") == "AI Engineer"
+    assert dashboard._humanize("LookDevArtist") == "Look Dev Artist"
