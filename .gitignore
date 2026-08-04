@@ -4,3 +4,5 @@ __pycache__/
 .venv/
 .superpowers/
 tools/forbidden_strings.local.txt
+.playwright-mcp/
+*.png

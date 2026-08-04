@@ -374,21 +374,20 @@ def render(context: dict) -> str:
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Job Dashboard</title>
+<title>Peckworks Job Tracker</title>
 {FAVICON}
 {FONTS}
 <style>{PAGE_CSS}</style>
 </head><body>
 <div class="topbar"><div class="wrap">
-  <span class="brand">Job<span class="dot">&bull;</span>Kit</span>
+  <span class="brand">Peckworks<span class="dot">&bull;</span>Job Tracker</span>
   <nav class="navcodes">
     <a href="#staged">Ready</a><a href="#active">Waiting</a><a href="#closed">Closed</a><a href="#library">Library</a>
   </nav>
 </div></div>
 <div class="wrap">
   <div class="hero">
-    <div class="eyebrow">Job search, tracked</div>
-    <h1 class="thesis">Every application, one <span class="hl">honest</span> view.</h1>
+    <h1 class="thesis">Peckworks <span class="hl">Job Tracker</span></h1>
     <div class="stamp">Updated {html.escape(context['today'])}</div>
   </div>
   <div class="ribbon">{ribbon}</div>
