@@ -27,15 +27,30 @@ def test_generated_page_never_fetches(tmp_path):
     assert "XMLHttpRequest" not in html
 
 
-def test_generated_page_loads_nothing_from_the_network(tmp_path):
-    """Links to postings are fine. Loading assets over the network is not -
-    the page must render identically with the wifi off."""
+def test_generated_page_loads_nothing_from_the_network_except_google_fonts(tmp_path):
+    """Links to postings are fine. The ONE allowed CDN load is the Google
+    Fonts stylesheet - nothing load-bearing depends on it, every font stack
+    ends in a system fallback, so the page still looks deliberate blocked.
+    This forbids: any <script src=, any @import, any remote <img src="http,
+    and any <link rel="stylesheet"> whose href is not on fonts.googleapis.com."""
     _workspace_with_two_jobs(tmp_path)
     html = dashboard.build(tmp_path, "2026-02-01")
     assert "<script src=" not in html
-    assert 'rel="stylesheet"' not in html
     assert "@import" not in html
     assert '<img src="http' not in html
+    for tag in re.findall(r"<link\b[^>]*>", html):
+        if 'rel="stylesheet"' not in tag:
+            continue
+        href = re.search(r'href="([^"]+)"', tag)
+        assert href and href.group(1).startswith("https://fonts.googleapis.com/"), tag
+
+
+def test_font_identity_link_is_present(tmp_path):
+    """Guards against silently dropping the Space Grotesk / IBM Plex identity."""
+    _workspace_with_two_jobs(tmp_path)
+    html = dashboard.build(tmp_path, "2026-02-01")
+    assert "fonts.googleapis.com/css2?family=Space+Grotesk" in html
+    assert 'rel="preconnect" href="https://fonts.gstatic.com"' in html
 
 
 def test_build_writes_the_ledger(tmp_path):
@@ -162,6 +177,47 @@ def test_posting_url_is_empty_when_first_line_is_not_a_url(tmp_path):
     (folder / "original_job_posting.md").write_text("Notes about the role\n", encoding="utf-8")
     html = dashboard.build(tmp_path, "2026-02-01")
     assert ">posting<" not in html
+
+
+# --- library section (guides/*.html) ---
+
+def test_library_section_appears_in_output(tmp_path):
+    workspace.init(tmp_path)
+    html = dashboard.build(tmp_path, "2026-02-01")
+    assert 'id="library"' in html
+
+
+def test_a_guide_with_title_and_description_renders(tmp_path):
+    workspace.init(tmp_path)
+    guides = tmp_path / "guides"
+    (guides / "negotiating.html").write_text(
+        '<html><head><title>Negotiating Offers</title>'
+        '<meta name="description" content="A short field guide to comp talks."></head>'
+        '<body></body></html>',
+        encoding="utf-8",
+    )
+    html = dashboard.build(tmp_path, "2026-02-01")
+    assert "Negotiating Offers" in html
+    assert "A short field guide to comp talks." in html
+    assert 'href="guides/negotiating.html"' in html
+
+
+def test_a_guide_with_a_hostile_title_is_escaped(tmp_path):
+    workspace.init(tmp_path)
+    guides = tmp_path / "guides"
+    (guides / "hostile.html").write_text(
+        '<html><head><title>R&D <script>alert(1)</script> Notes</title></head><body></body></html>',
+        encoding="utf-8",
+    )
+    html = dashboard.build(tmp_path, "2026-02-01")
+    assert "<script>alert(1)</script>" not in html
+    assert "R&amp;D" in html
+
+
+def test_empty_guides_dir_renders_an_honest_empty_state(tmp_path):
+    workspace.init(tmp_path)
+    html = dashboard.build(tmp_path, "2026-02-01")
+    assert "No guides yet" in html
 
 
 def test_posting_url_refuses_a_javascript_scheme(tmp_path):
