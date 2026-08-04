@@ -10,6 +10,11 @@ Two rules this module enforces mechanically:
      to today. Unknown stays unset.
   2. A closed job carries a closure_reason. "They rejected me" and "I gave up
      after 82 days" are different facts and one field cannot hold both.
+
+first_seen is different in kind from applied_date: the moment sync() first
+learns of a folder IS an observation, so setting it at creation is honest.
+It is set once and never touched again, and is never backfilled onto an
+entry that predates the field.
 """
 import json
 import os
@@ -60,6 +65,7 @@ def sync(book: dict, on_disk: dict, today: str) -> tuple[dict, list]:
             entry = {
                 "lane": lane,
                 "status": "none",
+                "first_seen": today,
                 "history": [f"{today}: first seen in {lane}"],
             }
             if lane == "applied":
@@ -113,8 +119,14 @@ def set_status(book: dict, folder: str, status: str, today: str, closure_reason=
     entry = book[folder]
     previous = entry.get("status", "none")
     entry["status"] = status
+    # status_date tracks the most recent status change, e.g. the date a job
+    # became interview_scheduled. Not to be confused with applied_date, which
+    # tracks one specific lane move and follows its own stricter rule above.
+    entry["status_date"] = today
     if closure_reason is not None:
         entry["closure_reason"] = closure_reason
+    if status == "closed":
+        entry["closed_date"] = today
 
     label = f"{status} ({closure_reason})" if closure_reason else status
     entry.setdefault("history", []).append(f"{today}: {previous} -> {label}")

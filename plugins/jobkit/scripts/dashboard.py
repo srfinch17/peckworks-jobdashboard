@@ -140,6 +140,9 @@ def build(root, today: str = None) -> str:
             "status": entry.get("status", "none"),
             "closure_reason": entry.get("closure_reason", ""),
             "applied_date": entry.get("applied_date", ""),
+            "first_seen": entry.get("first_seen", ""),
+            "closed_date": entry.get("closed_date", ""),
+            "status_date": entry.get("status_date", ""),
             "days_waiting": waited,
             "stale": waited is not None and waited >= config.get("stale_after_days", 21),
             "posting_url": entry.get("posting_url", ""),
@@ -150,11 +153,21 @@ def build(root, today: str = None) -> str:
 
     staged = [cards[f] for f, e in book.items() if e.get("lane") == "staged"]
     applied = [(f, e) for f, e in book.items() if e.get("lane") == "applied"]
-    active = [cards[f] for f, e in applied if e.get("status") != "closed"]
+    active_all = [cards[f] for f, e in applied if e.get("status") != "closed"]
     closed = [cards[f] for f, e in applied if e.get("status") == "closed"]
 
+    # An interview is the most important thing on the board, so it gets its
+    # own panel instead of blending into "waiting to hear". Moved, not
+    # duplicated.
+    interviews = [c for c in active_all if c["status"] in ("interview_scheduled", "interviewed")]
+    active = [c for c in active_all if c["status"] not in ("interview_scheduled", "interviewed")]
+
     staged.sort(key=lambda c: (-(c["score"] or 0), c["company"]))
-    active.sort(key=lambda c: (c["days_waiting"] is None, -(c["days_waiting"] or 0)))
+    # Newest applied first. An unset applied_date sorts to "" which is
+    # lexicographically less than any ISO date, so reverse=True pushes it to
+    # the bottom - it can never masquerade as today's application.
+    active.sort(key=lambda c: c["applied_date"] or "", reverse=True)
+    interviews.sort(key=lambda c: c["applied_date"] or "", reverse=True)
     closed.sort(key=lambda c: c["company"])
 
     return render({
@@ -163,6 +176,7 @@ def build(root, today: str = None) -> str:
         "vocabulary": config.get("vocabulary", {}),
         "staged": staged,
         "active": active,
+        "interviews": interviews,
         "closed": closed,
         "library": scan_guides(root / "guides"),
     })
@@ -252,6 +266,7 @@ PAGE_CSS = THEME_VARS + """
   .panel::before{content:""; position:absolute; top:0; left:0; right:0; height:3px;
     background:linear-gradient(90deg,var(--pa), color-mix(in srgb,var(--pa) 25%,transparent));}
   .p-ready{--pa:var(--signal);} .p-active{--pa:var(--have);} .p-closed{--pa:var(--muted);} .p-lib{--pa:var(--violet);}
+  .p-interviews{--pa:var(--partial);}
   .phead{display:flex; align-items:center; gap:13px; margin-bottom:4px; flex-wrap:wrap;}
   .phead .picon{flex:none; width:36px; height:36px; display:grid; place-items:center; border-radius:11px;
     color:var(--pa); background:color-mix(in srgb,var(--pa) 15%,transparent);
@@ -363,8 +378,11 @@ def render(context: dict) -> str:
 
     ready_label = label("staged", "Ready to apply")
     inflight_label = label("in_flight", "Waiting to hear")
+    interviews_label = label("interviews", "Interviews")
 
     sections = "".join([
+        _section(interviews_label, context["interviews"], "interviews", "p-interviews", "calendar",
+                 hide_if_empty=True),
         _section(ready_label, context["staged"], "staged", "p-ready", "layers"),
         _section(inflight_label, context["active"], "active", "p-active", "clock"),
         _section("Closed", context["closed"], "closed", "p-closed", "archive"),
@@ -374,20 +392,20 @@ def render(context: dict) -> str:
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Peckworks Job Tracker</title>
+<title>Peckworks JobKit</title>
 {FAVICON}
 {FONTS}
 <style>{PAGE_CSS}</style>
 </head><body>
 <div class="topbar"><div class="wrap">
-  <span class="brand">Peckworks<span class="dot">&bull;</span>Job Tracker</span>
+  <span class="brand">Peckworks<span class="dot">&bull;</span>JobKit</span>
   <nav class="navcodes">
-    <a href="#staged">Ready</a><a href="#active">Waiting</a><a href="#closed">Closed</a><a href="#library">Library</a>
+    <a href="#interviews">Interviews</a><a href="#staged">Ready</a><a href="#active">Waiting</a><a href="#closed">Closed</a><a href="#library">Library</a>
   </nav>
 </div></div>
 <div class="wrap">
   <div class="hero">
-    <h1 class="thesis">Peckworks <span class="hl">Job Tracker</span></h1>
+    <h1 class="thesis">Peckworks <span class="hl">JobKit</span></h1>
     <div class="stamp">Updated {html.escape(context['today'])}</div>
   </div>
   <div class="ribbon">{ribbon}</div>
@@ -412,11 +430,16 @@ q.addEventListener('input', () => {{
 """
 
 
-def _section(title: str, cards: list, key: str, panel_class: str, icon: str) -> str:
+def _section(title: str, cards: list, key: str, panel_class: str, icon: str,
+             hide_if_empty: bool = False) -> str:
     if not cards:
+        if hide_if_empty:
+            # An empty amber "interviews" panel at the top of the page every
+            # day is noise, unlike Library's deliberate empty state below.
+            return ""
         body = '<div class="empty">Nothing here yet.</div>'
     else:
-        body = '<div class="grid">' + "".join(_card(c) for c in cards) + "</div>"
+        body = '<div class="grid">' + "".join(_card(c, key) for c in cards) + "</div>"
     return (
         f'<section class="panel {panel_class}" id="{key}">'
         f'<div class="phead"><span class="picon">{_icon(icon)}</span><h2>{title}</h2>'
@@ -425,7 +448,15 @@ def _section(title: str, cards: list, key: str, panel_class: str, icon: str) -> 
     )
 
 
-def _card(c: dict) -> str:
+_INTERVIEW_LABELS = {"interview_scheduled": "Interview scheduled", "interviewed": "Interviewed"}
+
+
+def _applied_chip_text(applied_date: str) -> str:
+    """Unset must render as a visible gap, never be silently omitted."""
+    return f"applied {html.escape(applied_date)}" if applied_date else "applied date unknown"
+
+
+def _card(c: dict, section: str) -> str:
     company = html.escape(str(c["company"]))
     role = html.escape(str(c["role"]))
     location = html.escape(str(c["location"]))
@@ -435,9 +466,24 @@ def _card(c: dict) -> str:
     chips = []
     if location:
         chips.append(f'<span class="chip">{location}</span>')
-    if c["days_waiting"] is not None:
-        cls = "chip stale" if c["stale"] else "chip"
-        chips.append(f'<span class="{cls}">{c["days_waiting"]} days</span>')
+
+    if section == "staged":
+        if c["first_seen"]:
+            chips.append(f'<span class="chip">added {html.escape(c["first_seen"])}</span>')
+    elif section == "interviews":
+        label_text = _INTERVIEW_LABELS.get(c["status"], c["status"])
+        date_text = f" {html.escape(c['status_date'])}" if c["status_date"] else ""
+        chips.append(f'<span class="chip">{html.escape(label_text)}{date_text}</span>')
+    elif section == "active":
+        chips.append(f'<span class="chip">{_applied_chip_text(c["applied_date"])}</span>')
+        if c["days_waiting"] is not None:
+            cls = "chip stale" if c["stale"] else "chip"
+            chips.append(f'<span class="{cls}">{c["days_waiting"]} days</span>')
+    elif section == "closed":
+        chips.append(f'<span class="chip">{_applied_chip_text(c["applied_date"])}</span>')
+        if c["closed_date"]:
+            chips.append(f'<span class="chip">closed {html.escape(c["closed_date"])}</span>')
+
     if c["closure_reason"]:
         cls = "chip rejected" if c["closure_reason"] == "rejected" else "chip"
         chips.append(f'<span class="{cls}">{html.escape(c["closure_reason"].replace("_", " "))}</span>')

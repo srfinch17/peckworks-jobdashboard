@@ -220,6 +220,60 @@ def test_empty_guides_dir_renders_an_honest_empty_state(tmp_path):
     assert "No guides yet" in html
 
 
+# --- interviews panel ---
+
+def _section_html(html_doc: str, section_id: str) -> str:
+    match = re.search(rf'<section[^>]*id="{section_id}".*?</section>', html_doc, re.DOTALL)
+    return match.group(0) if match else ""
+
+
+def test_interview_scheduled_job_appears_in_interviews_not_waiting(tmp_path):
+    import ledger
+    config = workspace.init(tmp_path)
+    (workspace.lane_dir(tmp_path, config, "applied") / "8_Riot_LA_ConceptArtist").mkdir()
+    dashboard.build(tmp_path, "2026-01-10")
+    book = ledger.load(tmp_path / "job_ledger.json")
+    ledger.set_status(book, "8_Riot_LA_ConceptArtist", "interview_scheduled", "2026-01-15")
+    ledger.save(tmp_path / "job_ledger.json", book)
+    html_doc = dashboard.build(tmp_path, "2026-01-20")
+    interviews_section = _section_html(html_doc, "interviews")
+    waiting_section = _section_html(html_doc, "active")
+    assert "Riot" in interviews_section
+    assert "Riot" not in waiting_section
+
+
+def test_interviews_panel_appears_above_ready_to_apply(tmp_path):
+    import ledger
+    config = workspace.init(tmp_path)
+    (workspace.lane_dir(tmp_path, config, "applied") / "8_Riot_LA_ConceptArtist").mkdir()
+    dashboard.build(tmp_path, "2026-01-10")
+    book = ledger.load(tmp_path / "job_ledger.json")
+    ledger.set_status(book, "8_Riot_LA_ConceptArtist", "interview_scheduled", "2026-01-15")
+    ledger.save(tmp_path / "job_ledger.json", book)
+    html_doc = dashboard.build(tmp_path, "2026-01-20")
+    assert html_doc.index('id="interviews"') < html_doc.index('id="staged"')
+
+
+def test_no_interviews_section_is_absent(tmp_path):
+    _workspace_with_two_jobs(tmp_path)
+    html_doc = dashboard.build(tmp_path, "2026-02-01")
+    assert 'id="interviews"' not in html_doc
+
+
+def test_applied_job_with_no_applied_date_renders_unknown_and_sorts_last(tmp_path):
+    config = workspace.init(tmp_path)
+    staged = workspace.lane_dir(tmp_path, config, "staged") / "9_Known_LA_Job"
+    staged.mkdir()
+    dashboard.build(tmp_path, "2026-01-10")
+    staged.rename(workspace.lane_dir(tmp_path, config, "applied") / "9_Known_LA_Job")
+    dashboard.build(tmp_path, "2026-01-10")
+    (workspace.lane_dir(tmp_path, config, "applied") / "5_Unknown_LA_Job").mkdir()
+    html_doc = dashboard.build(tmp_path, "2026-02-01")
+    waiting_section = _section_html(html_doc, "active")
+    assert "applied date unknown" in waiting_section
+    assert waiting_section.index("Known") < waiting_section.index("Unknown")
+
+
 def test_posting_url_refuses_a_javascript_scheme(tmp_path):
     """Injection guard: only http(s) links are ever emitted as the posting link."""
     config = workspace.init(tmp_path)

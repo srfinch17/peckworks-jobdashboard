@@ -292,6 +292,39 @@ def test_load_rejects_a_non_object(tmp_path):
         ledger.load(path)
 
 
+# --- first_seen and closed_date ---
+
+def test_first_seen_is_set_on_creation_and_never_changes():
+    book, folder = _staged()
+    assert book[folder]["first_seen"] == "2026-01-05"
+    book, _ = ledger.sync(book, {folder: "applied"}, "2026-01-10")
+    assert book[folder]["first_seen"] == "2026-01-05"
+    ledger.set_status(book, folder, "interview_scheduled", "2026-01-15")
+    assert book[folder]["first_seen"] == "2026-01-05"
+
+
+def test_first_seen_absent_from_an_old_entry_is_not_backfilled():
+    """An entry created before the field existed simply lacks it, and a
+    later sync or status change must not silently invent it."""
+    book, folder = _staged()
+    del book[folder]["first_seen"]
+    book, _ = ledger.sync(book, {folder: "applied"}, "2026-01-10")
+    assert "first_seen" not in book[folder]
+
+
+def test_closed_date_is_set_by_set_status_when_closing():
+    book, folder = _staged()
+    book, _ = ledger.sync(book, {folder: "applied"}, "2026-01-10")
+    ledger.set_status(book, folder, "closed", "2026-02-01", closure_reason="rejected")
+    assert book[folder]["closed_date"] == "2026-02-01"
+
+
+def test_closed_date_is_not_set_for_a_non_closing_status_change():
+    book, folder = _staged()
+    ledger.set_status(book, folder, "awaiting", "2026-01-20")
+    assert "closed_date" not in book[folder]
+
+
 def test_days_since():
     assert ledger.days_since("2026-01-10", "2026-02-01") == 22
     assert ledger.days_since("", "2026-02-01") is None
