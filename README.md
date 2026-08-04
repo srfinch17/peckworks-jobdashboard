@@ -12,6 +12,21 @@ build step, no internet. It is the visible payoff of the whole thing.
 **Status: in development.** Design: `docs/superpowers/specs/2026-08-02-jobkit-design.md`.
 Plan: `docs/superpowers/plans/2026-08-03-jobkit-core-loop.md`.
 
+## What it reads on your machine
+
+Everything JobKit writes stays inside the workspace folder you name. Two things are worth
+stating plainly rather than burying:
+
+**Reading history.** The library marks a guide as read by checking your local browser history
+(Chrome, Chromium, Brave or Edge) for visits to guide files inside your workspace. It copies the
+history database, keeps only `file://` visits under the workspace, and discards everything else
+without recording it. Nothing is uploaded. The record lives in `reading_stats.json` in your own
+workspace. If no browser is found it does nothing and says so. Turn it off by setting
+`features.reading_stats` to `false` in `jobkit.json`.
+
+**Job postings.** Fetching a posting contacts that employer's site or job board, the same as
+opening the link yourself. Nothing about you is sent with it.
+
 ## Contributing
 
 After cloning, re-create the pre-commit guard (git does not version hooks):
