@@ -101,6 +101,24 @@ def _print_company_report(book: dict, company: str) -> int:
     return 0
 
 
+def _refresh_dashboard(root: Path, today: str) -> None:
+    """Rebuild CareerDashboard.html after any mutation this script makes.
+
+    The board updating on every change is a guard, not a reminder: the skills
+    also say to refresh, but this makes a stale board impossible to produce
+    through this script. Fail-soft on purpose: the status change is already
+    saved, so a render problem gets reported without undoing the change.
+    """
+    try:
+        html = dashboard.build(root, today)
+        out = root / "CareerDashboard.html"
+        out.write_text(html, encoding="utf-8")
+        print(f"Dashboard refreshed -> {out}")
+    except Exception as exc:
+        print(f"Warning: change saved, but the dashboard did not refresh ({exc}). "
+              "Run dashboard.py to rebuild it.")
+
+
 def main(argv: list) -> int:
     parser = argparse.ArgumentParser(prog="job_status.py", add_help=True)
     parser.add_argument("workspace")
@@ -203,6 +221,7 @@ def main(argv: list) -> int:
             return 2
         applied_date = book[folder].get("applied_date", "unknown")
         print(f"{folder}: moved to the applied lane; applied_date={applied_date}")
+        _refresh_dashboard(root, today)
         return 0
 
     try:
@@ -219,6 +238,7 @@ def main(argv: list) -> int:
         return 2
 
     print(f"{folder}: {entry['history'][-1]}")
+    _refresh_dashboard(root, today)
     return 0
 
 

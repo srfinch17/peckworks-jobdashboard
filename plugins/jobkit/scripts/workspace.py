@@ -71,6 +71,58 @@ This file is yours to read and edit.
 - The rendered page returns a browser-compatibility notice. That is an EXTRACTION
   failure, never a "this job is dead" verdict.
 - Last verified: (not yet used)
+
+# Entertainment and media industry sites
+
+Verified by direct probe on 2026-08-05. Re-mark stale with a date if one breaks.
+
+## NBCUniversal (nbcunicareers.com)
+- Fully public JSON API via SmartRecruiters, no auth needed:
+  `https://api.smartrecruiters.com/v1/companies/NBCUniversal3/postings?limit=100&offset=0`
+- One posting: append `/<id>`; the numeric id appears in the posting URL.
+- Returns the employer's whole open-req list in one call. Use it.
+- Last verified: 2026-08-05 (436 open postings at time of check)
+
+## Warner Bros. Discovery (careers.wbd.com)
+- Phenom front end over Workday. Search returns JSON via POST to
+  `https://careers.wbd.com/widgets` with `Content-Type: application/json` and a body:
+  `{"lang":"en_global","deviceType":"desktop","country":"global",
+    "pageName":"search-results","ddoKey":"refineSearch","from":0,"size":10,
+    "jobs":true,"counts":true,"all_fields":["category","country","state","city","type"],
+    "jdsource":"facets","siteType":"external","keywords":"<terms>","global":true,
+    "selected_fields":{},"locationData":{}}`
+- Read `refineSearch.data.jobs[]`: title, jobId, applyUrl, description teaser.
+- The applyUrl exposes the underlying Workday tenant
+  (`warnerbros.wd5.myworkdayjobs.com/global`), so the generic Workday recipe
+  above also applies.
+- Last verified: 2026-08-05
+
+## Paramount (careers.paramount.com)
+- SuccessFactors career site, server rendered: a plain GET works for search
+  and for job pages, no JS needed.
+- Search: `https://careers.paramount.com/search/?q=<terms>`; job links match `/job/`.
+- Last verified: 2026-08-05
+
+## Disney (jobs.disneycareers.com)
+- Radancy site, server rendered: a plain GET works.
+- Search: `https://jobs.disneycareers.com/search-jobs/<terms>`; job links match `/job/`.
+- Last verified: 2026-08-05
+
+## Fox (foxcareers.com)
+- Custom site, server rendered: a plain GET works.
+- Search: `https://www.foxcareers.com/Search?searchText=<terms>`;
+  job pages at `/Search/JobDetail/<ReqId>` (req ids look like R50032802).
+- Last verified: 2026-08-05
+
+## Upwork (upwork.com)
+- Hard wall: a plain fetch gets a Cloudflare challenge (HTTP 403, verified),
+  and job details require login. No public unauthenticated API exists.
+- Tier 1 (paste the posting text) is the reliable path. Tier 3 works only
+  through the user's own logged-in browser session.
+- Upwork is a freelance marketplace, not an employer: treat the posting CLIENT
+  as an intermediary of unknown identity and say so at intake, exactly like an
+  agency flag. Watch for rights-grab terms in the brief.
+- Last verified: 2026-08-05
 """
 
 STARTER_CLAUDE_MD = """# My rules

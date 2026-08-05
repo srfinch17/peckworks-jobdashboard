@@ -51,6 +51,12 @@ FORBIDDEN_LINE_ALLOWLIST: set[tuple[str, str]] = {
     ("README.md", "/plugin marketplace add srfinch17/peckworks-jobdashboard"),
     ("docs/LESSONS_HARVEST.md",
      "`github.com/srfinch17/peckworks-skills-laboratory` (nemesis-review, paladin-review,"),
+    # "Disney" is on the forbidden list because it appears in the owner's private
+    # application history. These two lines are the PUBLIC careers-site recipe the
+    # owner asked to ship; any other mention of the name still blocks.
+    ("plugins/jobkit/scripts/workspace.py", "## Disney (jobs.disneycareers.com)"),
+    ("plugins/jobkit/scripts/workspace.py",
+     "- Search: `https://jobs.disneycareers.com/search-jobs/<terms>`; job links match `/job/`."),
 }
 
 SKIP_DIRS = {".git", "__pycache__", "node_modules", "vendor", ".venv", ".pytest_cache"}

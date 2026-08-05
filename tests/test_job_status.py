@@ -151,3 +151,49 @@ def test_no_reachable_input_produces_a_traceback(tmp_path):
         result = run(*args)
         assert "Traceback" not in result.stdout
         assert "Traceback" not in result.stderr
+
+
+def test_status_change_refreshes_the_dashboard_mechanically(tmp_path):
+    """The board updating on every change is a guard, not a skill-prose reminder."""
+    root = tmp_path / "JobDashboard"
+    _seed(root, "8_LumenForge_Portland_Animator", lane="applied")
+    assert not (root / "CareerDashboard.html").exists()
+
+    result = run(str(root), "lumenforge", "interview_scheduled", "--date", "2026-02-01")
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    board = root / "CareerDashboard.html"
+    assert board.exists(), "status change must rebuild the dashboard"
+    html = board.read_text(encoding="utf-8")
+    assert 'id="interviews"' in html
+    assert "Lumen Forge" in html or "LumenForge" in html
+
+
+def test_applied_move_refreshes_the_dashboard_mechanically(tmp_path):
+    root = tmp_path / "JobDashboard"
+    _seed(root, "7_BrightPath_Remote_Rigger", lane="staged")
+
+    result = run(str(root), "brightpath", "--applied", "--date", "2026-02-01")
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    html = (root / "CareerDashboard.html").read_text(encoding="utf-8")
+    assert "applied 2026-02-01" in html
+
+
+def test_dashboard_refresh_failure_does_not_undo_the_status_change(tmp_path, monkeypatch):
+    """Fail-soft: the mutation is saved even if the render breaks."""
+    import job_status
+    import ledger as _ledger
+
+    root = tmp_path / "JobDashboard"
+    _seed(root, "8_LumenForge_Portland_Animator", lane="applied")
+
+    def boom(*a, **k):
+        raise RuntimeError("render exploded")
+
+    monkeypatch.setattr(job_status.dashboard, "build", boom)
+    rc = job_status.main([str(root), "lumenforge", "interview_scheduled", "--date", "2026-02-01"])
+
+    assert rc == 0
+    book = _ledger.load(root / "job_ledger.json")
+    assert book["8_LumenForge_Portland_Animator"]["status"] == "interview_scheduled"
