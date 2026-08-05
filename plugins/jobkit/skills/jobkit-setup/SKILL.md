@@ -99,6 +99,21 @@ Ask in this order, one at a time:
 `Baseline/` is the source of truth. **Every claim in every generated document must
 trace back to something in here.** Nothing else is ever invented.
 
+**`profile.json` is a convenience copy, not the source of truth.** It is an
+intermediate summary, and intermediate summaries rot silently against the
+artifacts they summarize. Two rules follow, and any other JobKit skill that
+reads `profile.json` should carry them too:
+
+- **When a check contradicts the profile, the artifact wins.** Correct
+  `profile.json` to match `Baseline/`, never the other way around. Re-verify
+  profile claims against the actual baseline and portfolio rather than
+  trusting `profile.json` indefinitely, on a schedule or at every build.
+- **Know which copy answers the question being asked.** "What did we send" is
+  answered only by the sent copy already in the job folder. "What is true
+  about the user" is answered only by `Baseline/` and the portfolio itself.
+  They diverge by design; reading the wrong one produces a confident false
+  finding.
+
 Two paths:
 
 - **They have a resume.** Ask them to save it into `Baseline/` and tell you the

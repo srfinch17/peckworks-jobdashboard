@@ -135,6 +135,10 @@ error message.
 - [ ] Envelope enforcement at generation time, with a `--force` escape that demands a reason
 - [ ] Sanitizer applying the user's own style rules mechanically at build time
 - [ ] Templates: engineer-style resume and artist-style resume (shorter, portfolio-led)
+- [ ] **Deferred, not v1:** practice-interview personas (a research-grounded interviewer persona
+      for a mock round). See `LESSONS_HARVEST.md` item 28.
+- [ ] **Deferred, not v1:** same-day debrief capture and prep grown from the user's own live
+      questions. See `LESSONS_HARVEST.md` item 37.
 
 ## Phase 3: polish
 

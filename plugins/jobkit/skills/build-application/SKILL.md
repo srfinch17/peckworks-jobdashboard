@@ -21,6 +21,27 @@ you say so to the user instead, as a gap.
 
 A fabricated line survives right up until someone asks about it in a room.
 
+## Re-derive every claim from source, never from a prior document
+
+**Every claim about the user's own work re-derives from `Baseline/` and the
+artifact inventory, NEVER from a previously generated document.** When
+tailoring for a new job, read `Baseline/`, not the resume you built for the
+last one. Generation chains compound drift: a verb shifts one synonym per
+document, each hop reads like a faithful paraphrase, and eventually the claim
+describes something that does not exist. The chain must stay depth one:
+source to draft, never draft to draft.
+
+**A distinctive claim is still a claim.** "The only," "the first," "the
+largest" reads as enthusiasm, which is exactly why nobody checks it. Verify it
+against whatever corpus would disprove it (the portfolio inventory, the
+baseline's own history), or cut it.
+
+**Hedging a credential the baseline states plainly is a defect in the other
+direction.** Marking a real qualification as partial invents a weakness on
+exactly the items a screener verifies. Framing defaults down for thin
+evidence, per the rule above, and it never defaults down for solid evidence.
+Both halves matter equally.
+
 ## Write the resume
 
 Tailored `.txt` in the job folder, named
@@ -45,6 +66,22 @@ Warning: for creative work this binds hardest to role attribution. If the baseli
 says they did backgrounds, no sentence may imply they did the whole piece. If it says
 they were one of six, no sentence may read as though they led it. When the baseline is
 vague about what part was theirs, **ask them** - do not choose the flattering reading.
+
+## The scar rule
+
+**Never cite a piece of work as support for a capability it does not
+demonstrate.** Check what the baseline actually says happened on that piece
+before citing it, not just that the piece exists. A project whose own record
+shows a technique failing is not evidence that technique works.
+
+A documented limit, stated first, is the most credible material available.
+Honest process material, what was hard, what got cut, what the piece
+deliberately does not attempt, reads as senior to anyone who knows the field.
+Unqualified polish claims read as inflation instead. When the user is citing a
+piece to support a claim, **ask them what was hard about it or what it
+deliberately does not attempt**, and prefer that material over a superlative.
+Leading with a measured limitation and deriving the approach from it can turn
+the weakest-sounding claim into the strongest one.
 
 ## Cover letter
 

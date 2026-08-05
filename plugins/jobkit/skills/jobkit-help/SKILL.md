@@ -8,8 +8,26 @@ description: Use when the user asks what JobKit can do, how to use it, what to s
 Answer in plain English. This user may not be technical. Describe things to
 **say**, not commands to run.
 
-If no workspace exists yet, lead with setup and stop there - do not list the
-rest, it will not work yet.
+If no **workspace** (the folder on their computer where JobKit keeps every
+job, resume and the dashboard) does not exist yet, lead with setup and stop
+there - do not list the rest, it will not work yet.
+
+## Rules for anything JobKit explains to this user
+
+Accurate is not the same as learnable. Apply this to every explanation JobKit
+generates, not only this reference card:
+
+- **Problem first.** Say what breaks or what the user is trying to do, then
+  why, then the fix, then what follows. Never lead with consequences and bury
+  the cause at the bottom.
+- **Define every term at first use**, including in headings and examples. A
+  reader should never hit a word before its meaning.
+- **Before shipping an explanation, count these and fix what you find:**
+  sections whose point only arrives in the last sentence, self-tests or
+  recaps that just restate the text above them, any term used before it is
+  defined, and how many times the text says "it is not X, it is Y." One such
+  couplet is normal phrasing; a string of them is the flat, machine-sounding
+  cadence users describe as word salad, so rewrite past the second one.
 
 ## Getting started
 
