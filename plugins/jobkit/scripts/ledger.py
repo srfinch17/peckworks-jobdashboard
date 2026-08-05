@@ -18,6 +18,7 @@ entry that predates the field.
 """
 import json
 import os
+import re
 from datetime import date
 from pathlib import Path
 
@@ -235,6 +236,152 @@ def counts(book: dict) -> dict:
         if status != "none" and lane in ("applied", "missing"):
             tally["in_flight"] += 1
     return tally
+
+
+def records_for_company(book: dict, company: str) -> list:
+    """Every folder for this employer, across every lane and status -
+    applied, skipped, not_applied, expired, missing, all of it. Lesson 33:
+    a duplicate application is invisible until someone lists a folder by
+    hand on the eve of an interview; this is that listing, on demand.
+    Case-insensitive; a folder whose entry is missing/malformed or has no
+    company field just doesn't match, it never raises."""
+    needle = company.strip().lower()
+    if not needle:
+        return []
+    out = []
+    for folder, entry in book.items():
+        if not isinstance(entry, dict):
+            continue
+        entry_company = entry.get("company")
+        if isinstance(entry_company, str) and entry_company.strip().lower() == needle:
+            out.append(folder)
+    return sorted(out)
+
+
+_ROLE_NORMALIZE_RE = re.compile(r"[^a-z0-9]+")
+
+
+def _normalize_role(role) -> str:
+    """Lowercase, strip punctuation/spacing down to a bare run of
+    alphanumerics, so "Senior VFX Artist", "senior-vfx-artist", and "Senior
+    VFX  Artist " all collapse to the same key. A real title difference
+    ("VFX Artist" vs "VFX Supervisor") still differs after this."""
+    if not isinstance(role, str):
+        return ""
+    return _ROLE_NORMALIZE_RE.sub("", role.lower())
+
+
+def duplicate_candidates(book: dict, posting_url: str = None, company: str = None,
+                          role: str = None) -> list:
+    """Folders that look like the same application as the given
+    posting_url/company/role. posting_url is the listing id: an exact match
+    on it is a duplicate on its own. Otherwise, company + a normalized role
+    (see _normalize_role) must both match - company alone is too broad
+    (every application to the same employer would "duplicate")."""
+    hits = set()
+
+    if posting_url:
+        needle_url = posting_url.strip()
+        if needle_url:
+            for folder, entry in book.items():
+                if not isinstance(entry, dict):
+                    continue
+                if entry.get("posting_url") == needle_url:
+                    hits.add(folder)
+
+    if company:
+        norm_role = _normalize_role(role) if role else None
+        for folder in records_for_company(book, company):
+            if norm_role is None:
+                continue  # company alone is not a duplicate signal
+            entry = book[folder]
+            if _normalize_role(entry.get("role")) == norm_role:
+                hits.add(folder)
+
+    return sorted(hits)
+
+
+def response_intervals(book: dict, company: str) -> list:
+    """Days from each application (and each completed interview round) to
+    this employer's next OBSERVED response, for every folder for `company`.
+    A response is a status change the employer caused: any move away from
+    "awaiting", or a close with closure_reason "rejected". closed_no_response
+    is the absence of a response and never enters the sample (lesson 34).
+
+    Reads the history log sync()/set_status() already write - no new state
+    to keep in sync, and no schema drift risk from a shape only this
+    function would care about.
+
+    ponytail: counts one interval per application (apply -> first employer
+    response), not a separate interval per completed interview round -
+    the per-job baseline this feeds (days_since_last_signal) only ever
+    needs one active clock per job at a time, so a second clock per round
+    would be tracked but never read. Extend to per-round intervals if a
+    future feature reads mid-pipeline round timing specifically.
+    """
+    intervals = []
+    for folder in records_for_company(book, company):
+        entry = book[folder]
+        applied = entry.get("applied_date")
+        if not applied:
+            continue
+        history = entry.get("history", [])
+        for line in history:
+            days = _response_delay(applied, line)
+            if days is not None:
+                intervals.append(days)
+                break  # one response per application counted once
+    return intervals
+
+
+_HISTORY_RE = re.compile(r"^(\d{4}-\d{2}-\d{2}): (\w+) -> (\w+)(?: \((\w+)\))?")
+
+
+def _is_employer_response(previous, new, reason) -> bool:
+    """A response is a status change the employer caused: any move away
+    from awaiting, EXCEPT a close - a close only counts when its reason is
+    "rejected". closed_no_response is the absence of a response by
+    definition, and withdrawn is the applicant's own move, not theirs."""
+    if previous != "awaiting":
+        return False
+    if new == "closed":
+        return reason == "rejected"
+    return True
+
+
+def _response_delay(applied_date: str, history_line: str):
+    """The day count from applied_date to `history_line`'s date, if that
+    line is an employer-caused response (see _is_employer_response); None
+    otherwise, or on a bad date."""
+    match = _HISTORY_RE.match(history_line)
+    if not match:
+        return None
+    when, previous, new, reason = match.groups()
+    if not _is_employer_response(previous, new, reason):
+        return None
+    return days_since(applied_date, when)
+
+
+def days_since_last_signal(entry: dict, today: str):
+    """Days since the most recent real signal on this job: the later of
+    applied_date and the last employer-caused status change (same test as
+    response_intervals - closed_no_response is not a signal). None (never
+    0) when there is no applied_date; guessing a start date is exactly what
+    this module refuses to do elsewhere."""
+    applied = entry.get("applied_date")
+    if not applied:
+        return None
+    last = applied
+    for line in entry.get("history", []):
+        match = _HISTORY_RE.match(line)
+        if not match:
+            continue
+        when, previous, new, reason = match.groups()
+        if not _is_employer_response(previous, new, reason):
+            continue
+        if when > last:
+            last = when
+    return days_since(last, today)
 
 
 def days_since(date_str, today: str):

@@ -162,6 +162,36 @@ def scan_guides(guides_dir: Path) -> list:
     return items
 
 
+def _response_baseline(book: dict, company: str):
+    """Lesson 34: an employer's own measured behavior is the only valid
+    baseline for reading their silence. Returns (source, window_days):
+    "employer" + that employer's own longest measured response gap when
+    they have measured history, else "global" + the longest measured gap
+    pooled across every employer in the ledger, else (None, None) when
+    nothing has ever been measured. Never labels a global number as if it
+    were this employer's own - the caller must show which one it is.
+
+    ponytail: window_days is the observed max, not a percentile - a v1
+    reading of "normal" that is honest about being a small sample size.
+    Swap for a percentile once a ledger has enough responses per employer
+    for one to mean something.
+    """
+    if company:
+        own = ledger.response_intervals(book, company)
+        if own:
+            return "employer", max(own)
+    companies = {
+        e.get("company") for e in book.values()
+        if isinstance(e, dict) and e.get("company")
+    }
+    pooled = []
+    for c in companies:
+        pooled.extend(ledger.response_intervals(book, c))
+    if pooled:
+        return "global", max(pooled)
+    return None, None
+
+
 def build(root, today: str = None) -> str:
     root = Path(root)
     today = today or date.today().isoformat()
@@ -192,6 +222,16 @@ def build(root, today: str = None) -> str:
     def card(folder: str, entry: dict) -> dict:
         lane = entry.get("lane", "missing")
         waited = ledger.days_since(entry.get("applied_date"), today)
+        # Lesson 34: the clock that decides "silent" (functionally closed)
+        # and the clock the user actually reads on the card must be the SAME
+        # clock - days since the last real signal (apply, or the employer's
+        # own last move), not plain days-since-applied, or the two chips can
+        # read as contradicting each other on a job that had a phone screen.
+        signal_days = ledger.days_since_last_signal(entry, today)
+        silent = signal_days is not None and signal_days >= config.get("silence_closure_days", 30)
+        response_source = response_window = None
+        if signal_days is not None and not silent:
+            response_source, response_window = _response_baseline(book, entry.get("company"))
         return {
             "folder": folder,
             "company": entry.get("company") or folder,
@@ -206,7 +246,10 @@ def build(root, today: str = None) -> str:
             "status_date": entry.get("status_date", ""),
             "days_waiting": waited,
             "stale": waited is not None and waited >= config.get("stale_after_days", 21),
-            "silent": waited is not None and waited >= config.get("silence_closure_days", 30),
+            "days_since_signal": signal_days,
+            "silent": silent,
+            "response_source": response_source,
+            "response_window": response_window,
             "posting_url": entry.get("posting_url", ""),
             "folder_uri": _folder_uri(root, config, lane, folder) if lane in config["lanes"] else "",
         }
@@ -620,6 +663,20 @@ def _applied_chip_text(applied_date: str) -> str:
     return f"applied {html.escape(applied_date)}" if applied_date else "applied date unknown"
 
 
+def _baseline_chip(escaped_company: str, source: str, window_days: int) -> str:
+    """Lesson 34: inside the measured normal window, say explicitly - in
+    words, not just a number - that the silence is uninformative in both
+    directions. Labels which baseline is in play; a global figure is never
+    presented as if it were this employer's own."""
+    if source == "employer":
+        text = (f"{escaped_company}'s own normal wait runs up to {window_days}d - "
+                "this silence isn't good news or bad news yet")
+    else:
+        text = (f"no history yet for {escaped_company}; search-wide baseline is up to "
+                f"{window_days}d - this silence isn't good news or bad news yet")
+    return f'<span class="chip">{text}</span>'
+
+
 def _card(c: dict, section: str) -> str:
     company = html.escape(str(c["company"]))
     role = html.escape(str(c["role"]))
@@ -643,19 +700,30 @@ def _card(c: dict, section: str) -> str:
         chips.append(f'<span class="chip offer">Offer{date_text}</span>')
     elif section == "active":
         chips.append(f'<span class="chip">{_applied_chip_text(c["applied_date"])}</span>')
-        if c["days_waiting"] is not None:
-            if c["days_waiting"] < 0:
+        # Lesson 34: this is days since the LAST SIGNAL (apply, or the
+        # employer's own last move), not just days since applied - a job
+        # that had a phone screen last week reads from that week, not from
+        # the original apply date.
+        signal_days = c["days_since_signal"]
+        if signal_days is not None:
+            if signal_days < 0:
                 # A hand-typed applied_date in the future - "-26448 days" is
                 # meaningless to a user, so flag it instead of rendering it.
                 chips.append('<span class="chip stale">applied date is in the future</span>')
             else:
                 cls = "chip stale" if c["stale"] else "chip"
-                chips.append(f'<span class="{cls}">{c["days_waiting"]} days</span>')
+                chips.append(f'<span class="{cls}">{signal_days} days since last signal</span>')
                 # FIX 5: silence_closure_days wired to a visible chip - a
                 # long silence is a stronger signal than plain staleness,
                 # so it shows up in addition to, not instead of, the count.
+                # It must never appear alongside the "uninformative silence"
+                # chip below - the two would contradict each other, so
+                # response_source is only ever set on a card that is not
+                # already past silence_closure_days (see build()'s card()).
                 if c["silent"]:
                     chips.append('<span class="chip stale">no response - likely closed silently</span>')
+                elif c["response_source"]:
+                    chips.append(_baseline_chip(company, c["response_source"], c["response_window"]))
     elif section == "closed":
         chips.append(f'<span class="chip">{_applied_chip_text(c["applied_date"])}</span>')
         if c["closed_date"]:

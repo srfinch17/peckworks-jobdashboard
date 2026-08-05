@@ -4,6 +4,12 @@
 Usage:
   python3 job_status.py <workspace> <folder-fragment> <status> [--reason R] [--date YYYY-MM-DD] [--move]
   python3 job_status.py <workspace> <folder-fragment> --applied [--date YYYY-MM-DD]
+  python3 job_status.py <workspace> --company <name>
+
+--company is the lesson-33 pre-interview check: every record for that
+employer, across every lane and status (including skipped/not_applied/
+expired/missing), so a duplicate application shows up before the interview
+does instead of on the eve of it.
 
 <status> is one of: awaiting, phone_screen, interview_scheduled, interviewed,
 offer, closed. "closed" requires --reason (rejected, closed_no_response, or
@@ -30,6 +36,7 @@ import sys
 from datetime import date
 from pathlib import Path
 
+import dashboard
 import ledger
 import workspace
 
@@ -65,21 +72,74 @@ def _apply_move(root: Path, config: dict, book: dict, on_disk: dict, folder: str
     return None
 
 
+def _print_company_report(book: dict, company: str) -> int:
+    """Lesson 33's pre-interview check: every record for this employer, one
+    line each, lane + status + dates + posting URL, so a duplicate shows up
+    reading a terminal instead of listing folders by hand the night before."""
+    # A ledger entry only carries a `company` field once dashboard.build()
+    # has enriched it from the folder name (or it was set some other way).
+    # Fall back to the same parse here, in memory only (never saved), so
+    # --company works even before the dashboard has ever run.
+    for folder, entry in book.items():
+        if isinstance(entry, dict) and not entry.get("company"):
+            entry["company"] = dashboard.parse_folder(folder)["company"]
+    folders = ledger.records_for_company(book, company)
+    if not folders:
+        print(f"No records for '{company}'.")
+        return 0
+    print(f"{len(folders)} record(s) for '{company}':")
+    for folder in folders:
+        entry = book[folder]
+        lane = entry.get("lane", "missing")
+        status = entry.get("status", "none")
+        applied = entry.get("applied_date") or "-"
+        status_date = entry.get("status_date") or "-"
+        posting_url = entry.get("posting_url") or "-"
+        print(f"  {folder}")
+        print(f"    lane={lane} status={status} applied={applied} "
+              f"status_date={status_date} posting_url={posting_url}")
+    return 0
+
+
 def main(argv: list) -> int:
     parser = argparse.ArgumentParser(prog="job_status.py", add_help=True)
     parser.add_argument("workspace")
-    parser.add_argument("fragment")
+    parser.add_argument("fragment", nargs="?", default=None)
     parser.add_argument("status", nargs="?", default=None)
     parser.add_argument("--reason", default=None, choices=list(ledger.CLOSURE_REASONS))
     parser.add_argument("--date", default=None)
     parser.add_argument("--move", action="store_true")
     parser.add_argument("--applied", action="store_true")
+    parser.add_argument("--company", default=None,
+                         help="Print every record for this employer, across every lane/status.")
 
     try:
         args = parser.parse_args(argv)
     except SystemExit as exc:
         # argparse already printed a usage message to stderr; nothing left to do.
         return exc.code if isinstance(exc.code, int) else 2
+
+    if args.company:
+        root = Path(args.workspace).expanduser().resolve()
+        if not root.exists():
+            print(f"No such path: {root}")
+            return 2
+        if not (root / "jobkit.json").exists():
+            print(f"No JobKit workspace at {root} (no jobkit.json). Run setup first.")
+            return 2
+        try:
+            config = workspace.load_config(root)
+            on_disk = workspace.scan(root, config)
+            book = ledger.load(root / "job_ledger.json")
+        except (ValueError, json.JSONDecodeError, OSError) as exc:
+            print(f"Config or ledger at {root} is unreadable: {exc}")
+            return 2
+        book, _ = ledger.sync(book, on_disk, date.today().isoformat())
+        return _print_company_report(book, args.company)
+
+    if args.fragment is None:
+        print("Give a folder fragment and status, or use --company. See --help.")
+        return 2
 
     if args.applied and args.status not in (None, "applied"):
         print("Cannot combine --applied with a status other than 'applied'.")

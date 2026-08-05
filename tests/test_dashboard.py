@@ -612,6 +612,83 @@ def test_a_long_silent_waiting_job_gets_a_silence_chip(tmp_path):
     assert "likely closed silently" in waiting_section
 
 
+# --- Lesson 34: the per-employer response clock ---
+
+def _apply_and_close(tmp_path, config, folder, apply_day, close_day, reason="rejected"):
+    import ledger
+    (workspace.lane_dir(tmp_path, config, "staged") / folder).mkdir()
+    dashboard.build(tmp_path, apply_day)
+    (workspace.lane_dir(tmp_path, config, "staged") / folder).rename(
+        workspace.lane_dir(tmp_path, config, "applied") / folder)
+    dashboard.build(tmp_path, apply_day)
+    book = ledger.load(tmp_path / "job_ledger.json")
+    ledger.set_status(book, folder, "closed", close_day, closure_reason=reason)
+    ledger.save(tmp_path / "job_ledger.json", book)
+
+
+def _apply_only(tmp_path, config, folder, apply_day):
+    (workspace.lane_dir(tmp_path, config, "staged") / folder).mkdir()
+    dashboard.build(tmp_path, apply_day)
+    (workspace.lane_dir(tmp_path, config, "staged") / folder).rename(
+        workspace.lane_dir(tmp_path, config, "applied") / folder)
+    dashboard.build(tmp_path, apply_day)
+
+
+def test_waiting_card_inside_employer_normal_window_says_silence_is_uninformative(tmp_path):
+    config = workspace.init(tmp_path)
+    _apply_and_close(tmp_path, config, "8_LumenForge_Portland_Modeler", "2026-01-01", "2026-01-15")
+    _apply_and_close(tmp_path, config, "7_LumenForge_Austin_Rigger", "2026-02-01", "2026-02-22")
+    _apply_only(tmp_path, config, "9_LumenForge_Remote_Animator", "2026-03-01")
+
+    # 10 days waiting, well inside the measured 14-21 day window.
+    html_doc = dashboard.build(tmp_path, "2026-03-11")
+    waiting_section = _section_html(html_doc, "active")
+    assert "LumenForge" in waiting_section
+    assert "isn't good news or bad news yet" in waiting_section
+    assert "likely closed silently" not in waiting_section
+
+
+def test_waiting_card_with_no_employer_history_uses_the_global_baseline(tmp_path):
+    config = workspace.init(tmp_path)
+    _apply_and_close(tmp_path, config, "8_LumenForge_Portland_Modeler", "2026-01-01", "2026-01-15")
+    _apply_only(tmp_path, config, "9_OtherCo_Remote_Rigger", "2026-02-01")
+
+    html_doc = dashboard.build(tmp_path, "2026-02-06")
+    waiting_section = _section_html(html_doc, "active")
+    assert "no history yet for OtherCo" in waiting_section
+    assert "search-wide baseline" in waiting_section
+
+
+def test_silent_chip_and_uninformative_chip_never_both_appear(tmp_path):
+    config = workspace.init(tmp_path)
+    _apply_and_close(tmp_path, config, "8_LumenForge_Portland_Modeler", "2026-01-01", "2026-01-15")
+    _apply_only(tmp_path, config, "9_LumenForge_Remote_Animator", "2026-01-01")
+
+    # 45 days later - past the default silence_closure_days (30).
+    html_doc = dashboard.build(tmp_path, "2026-02-15")
+    waiting_section = _section_html(html_doc, "active")
+    assert "likely closed silently" in waiting_section
+    assert "good news or bad news" not in waiting_section
+
+
+def test_waiting_card_with_no_applied_date_renders_neither_signal_chip():
+    """No applied_date must mean no chip, never a guessed 0."""
+    text = dashboard._card(
+        {
+            "company": "LumenForge", "role": "", "location": "", "score": None,
+            "status": "awaiting", "closure_reason": "", "applied_date": "",
+            "first_seen": "", "closed_date": "", "status_date": "",
+            "days_waiting": None, "stale": False, "days_since_signal": None,
+            "silent": False, "response_source": None, "response_window": None,
+            "posting_url": "", "folder_uri": "",
+        },
+        "active",
+    )
+    assert "days since last signal" not in text
+    assert "good news or bad news" not in text
+    assert "applied date unknown" in text
+
+
 def test_a_future_applied_date_does_not_render_as_negative_days(tmp_path):
     import ledger
     config = workspace.init(tmp_path)

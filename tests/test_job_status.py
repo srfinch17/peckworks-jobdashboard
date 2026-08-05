@@ -107,6 +107,32 @@ def test_silence_closure_counts_as_closed_no_response_not_rejected(tmp_path):
     assert tally["rejected"] == 0
 
 
+# --- Lesson 33: --company, the pre-interview duplicate check ---
+
+def test_company_mode_lists_every_record_for_the_employer(tmp_path):
+    root = tmp_path / "JobDashboard"
+    config = _seed(root, "7_LumenForge_Portland_Animator", lane="staged")
+    _add_folder(root, config, "8_LumenForge_Portland_Modeler", "skipped", "2026-01-05")
+    _add_folder(root, config, "9_OtherCo_Remote_Rigger", "staged", "2026-01-05")
+
+    result = run(str(root), "--company", "LumenForge")
+
+    assert result.returncode == 0
+    assert "LumenForge_Portland_Animator" in result.stdout
+    assert "LumenForge_Portland_Modeler" in result.stdout
+    assert "OtherCo_Remote_Rigger" not in result.stdout
+
+
+def test_company_mode_reports_none_found_without_erroring(tmp_path):
+    root = tmp_path / "JobDashboard"
+    _seed(root, "7_Acme_Remote_Artist", lane="staged")
+
+    result = run(str(root), "--company", "NoSuchEmployer")
+
+    assert result.returncode == 0
+    assert "No records" in result.stdout
+
+
 def test_no_reachable_input_produces_a_traceback(tmp_path):
     root = tmp_path / "JobDashboard"
     _seed(root, "7_Acme_Remote_Artist", lane="staged")

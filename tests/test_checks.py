@@ -1,3 +1,5 @@
+import pytest
+
 import checks
 
 
@@ -33,8 +35,13 @@ def test_envelope_counts_only_h2_headings():
 
 
 def test_banned_phrases_finds_a_hit_case_insensitively():
+    # Lesson 31: return shape changed from a bare phrase list to one dict per
+    # hit (phrase + surrounding context), so a caller can point at the hit
+    # instead of just naming it.
     hits = checks.banned_phrases("I am a proven self-starter", ["self-starter"])
-    assert hits == ["self-starter"]
+    assert len(hits) == 1
+    assert hits[0]["phrase"] == "self-starter"
+    assert "self-starter" in hits[0]["context"]
 
 
 def test_banned_phrases_returns_empty_when_clean():
@@ -227,3 +234,48 @@ def test_run_all_is_empty_for_a_clean_document():
 
 def test_run_all_uses_defaults_when_profile_is_bare():
     assert checks.run_all(RESUME, {}) == []
+
+
+# --- Lesson 31: whitespace/wrap-tolerant matching, and the assert helper ---
+
+def test_banned_phrase_split_by_a_newline_is_caught():
+    text = "This candidate is a real self\nstarter with initiative."
+    hits = checks.banned_phrases(text, ["self starter"])
+    assert len(hits) == 1
+    assert hits[0]["phrase"] == "self starter"
+
+
+def test_banned_phrase_split_by_a_hyphen_and_a_newline_is_caught():
+    text = "This candidate is a real self-\nstarter with initiative."
+    hits = checks.banned_phrases(text, ["self-starter"])
+    assert len(hits) == 1
+    assert hits[0]["phrase"] == "self-starter"
+
+
+def test_banned_phrase_with_doubled_internal_spaces_is_caught():
+    text = "This candidate is a real self   starter with initiative."
+    hits = checks.banned_phrases(text, ["self starter"])
+    assert len(hits) == 1
+
+
+def test_inflation_still_gates_the_employer_carve_out_after_normalization():
+    """The false-positive corpus must survive normalization: a phrase
+    wrapped mid-line, describing the employer, must not start flagging."""
+    text = "I worked at a world-\nclass studio on that show."
+    assert checks.inflation(text) == []
+
+
+def test_assert_removed_passes_when_the_phrase_is_gone():
+    checks.assert_removed("This candidate is dependable.", "self-starter")
+
+
+def test_assert_removed_raises_when_a_fix_pass_no_ops():
+    with pytest.raises(AssertionError, match="self-starter"):
+        checks.assert_removed("still a real self-starter here", "self-starter")
+
+
+def test_assert_removed_catches_a_wrapped_survivor():
+    """The whole point: a fix pass that removed the phrase on one line but
+    left a wrapped duplicate elsewhere must not report clean."""
+    with pytest.raises(AssertionError):
+        checks.assert_removed("a real self-\nstarter survives here", "self-starter")

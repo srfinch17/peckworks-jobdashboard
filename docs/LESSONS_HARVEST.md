@@ -254,7 +254,7 @@ opening the primary source resolved it. Rules:
   baseline and artifacts. The two diverge by design, and a check armed with the wrong one produces
   confident false positives.
 
-### 31. Distinct review lenses find DISJOINT defect classes, and a fix pass creates regressions. **TRANSFER, tier 1**
+### 31. Distinct review lenses find DISJOINT defect classes, and a fix pass creates regressions. **TRANSFER, tier 1** **FOLDED 2026-08-05: `checks.py` normalizes whitespace/hyphen-wraps before matching (`normalize_whitespace`), reports context per hit, and adds `assert_removed()` for fix passes.**
 Measured three separate times in the source workspace, with zero blocker overlap between lenses
 each time: a readability pass finds only readability defects; only a checker ARMED WITH THE
 ARTIFACTS finds the falsifiable claims; and a batch of fixes reliably introduces new defects
@@ -277,7 +277,7 @@ deliberately does not attempt) reads as senior to any reviewer who knows the fie
 unqualified polish claims read as inflation. The tool should surface the user's real limits as
 usable material, not sand them off.
 
-### 33. Duplicate applications to the same employer are invisible until they bite. **TRANSFER, tier 1**
+### 33. Duplicate applications to the same employer are invisible until they bite. **TRANSFER, tier 1** **FOLDED 2026-08-05: `ledger.records_for_company()`/`duplicate_candidates()`, and `job_status.py --company` for the pre-interview check.**
 Field case: four records existed for one employer, two of them pointing at the SAME listing id,
 applied weeks apart, discovered only by a manual folder listing on the eve of an interview. The
 employer's ATS may well show a double application, and the only bad version is being surprised by
@@ -285,7 +285,7 @@ the question. Mechanical fixes: dedup on listing id AND on employer+title at int
 pre-interview check that surfaces EVERY record for that employer across all statuses, including
 skips and orphans.
 
-### 34. A per-employer response clock is the only thing that makes silence readable. **TRANSFER, extends 24**
+### 34. A per-employer response clock is the only thing that makes silence readable. **TRANSFER, extends 24** **FOLDED 2026-08-05: `ledger.response_intervals()`/`days_since_last_signal()`; dashboard waiting-card chip shows the employer's own baseline or falls back to the global one, labeled, and never contradicts the `silence_closure_days` chip.**
 Record the interval from every application and every completed round to every employer response.
 An employer's own measured behavior is the only valid baseline for reading their silence: in the
 source workspace one employer reliably sent dispositions about 20 days after a final round, and

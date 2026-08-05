@@ -357,6 +357,138 @@ def test_days_since_degrades_to_none_on_a_malformed_date():
     assert ledger.days_since(12345, "2026-02-01") is None
 
 
+# --- Lesson 33: duplicate application detection ---
+
+def _books_with_companies(specs, today="2026-01-01"):
+    """specs: [(folder, company, lane, role, posting_url), ...]. One sync
+    call with every folder present at once, so no folder transiently drops
+    out of on_disk and gets mismarked "missing" mid-build."""
+    on_disk = {folder: lane for folder, company, lane, role, url in specs}
+    book, _ = ledger.sync({}, on_disk, today)
+    for folder, company, lane, role, url in specs:
+        entry = book[folder]
+        entry["company"] = company
+        entry["role"] = role
+        if url:
+            entry["posting_url"] = url
+    return book
+
+
+def test_records_for_company_spans_every_lane_including_skipped_and_missing():
+    book = _books_with_companies([
+        ("a", "LumenForge", "applied", "Modeler", None),
+        ("b", "LumenForge", "skipped", "Modeler", None),
+        ("c", "LumenForge", "not_applied", "Modeler", None),
+        ("d", "OtherCo", "applied", "Modeler", None),
+    ])
+    # "a" vanishes from disk on the next sync - a folder tidied away must
+    # still turn up in the pre-interview check.
+    book, _ = ledger.sync(book, {"b": "skipped", "c": "not_applied", "d": "applied"}, "2026-02-01")
+    assert book["a"]["lane"] == "missing"
+    found = ledger.records_for_company(book, "lumenforge")
+    assert found == ["a", "b", "c"]
+
+
+def test_records_for_company_is_case_insensitive():
+    book = _books_with_companies([("a", "LumenForge", "applied", "Modeler", None)])
+    assert ledger.records_for_company(book, "LUMENFORGE") == ["a"]
+
+
+def test_records_for_company_tolerates_a_missing_company_field():
+    book, _ = ledger.sync({}, {"a": "staged"}, "2026-01-01")
+    assert ledger.records_for_company(book, "anything") == []
+
+
+def test_duplicate_candidates_finds_a_shared_posting_url():
+    book = _books_with_companies([
+        ("a", "LumenForge", "applied", "Modeler", "https://x.test/job/42"),
+        ("b", "LumenForge", "applied", "Environment Artist", "https://x.test/job/42"),
+    ])
+    dupes = ledger.duplicate_candidates(book, posting_url="https://x.test/job/42")
+    assert dupes == ["a", "b"]
+
+
+def test_duplicate_candidates_finds_same_company_and_role_despite_case_and_punctuation():
+    book = _books_with_companies([
+        ("a", "LumenForge", "applied", "Senior VFX Artist", None),
+        ("b", "LumenForge", "applied", "senior-vfx-artist", None),
+    ])
+    dupes = ledger.duplicate_candidates(book, company="LumenForge", role="Senior VFX Artist")
+    assert dupes == ["a", "b"]
+
+
+def test_duplicate_candidates_does_not_flag_a_genuinely_different_role():
+    book = _books_with_companies([
+        ("a", "LumenForge", "applied", "Modeler", None),
+        ("b", "LumenForge", "applied", "Environment Artist", None),
+    ])
+    dupes = ledger.duplicate_candidates(book, company="LumenForge", role="Modeler")
+    assert dupes == ["a"]
+
+
+# --- Lesson 34: per-employer response clock ---
+
+def _applied_with_company(folder, company, applied_date):
+    # Through staged -> applied, like real usage, so the move is OBSERVED
+    # and applied_date actually gets set (see ledger.sync's docstring rule).
+    book, _ = ledger.sync({}, {folder: "staged"}, applied_date)
+    book, _ = ledger.sync(book, {folder: "applied"}, applied_date)
+    book[folder]["company"] = company
+    return book
+
+
+def test_response_intervals_for_an_employer_with_three_measured_responses():
+    book = _applied_with_company("a", "LumenForge", "2026-01-01")
+    book["b"] = _applied_with_company("b", "LumenForge", "2026-02-01")["b"]
+    book["c"] = _applied_with_company("c", "LumenForge", "2026-03-01")["c"]
+    ledger.set_status(book, "a", "closed", "2026-01-15", closure_reason="rejected")
+    ledger.set_status(book, "b", "closed", "2026-02-22", closure_reason="rejected")
+    ledger.set_status(book, "c", "closed", "2026-03-19", closure_reason="rejected")
+    intervals = ledger.response_intervals(book, "LumenForge")
+    assert sorted(intervals) == [14, 18, 21]
+
+
+def test_closed_no_response_does_not_enter_the_response_sample():
+    book = _applied_with_company("a", "LumenForge", "2026-01-01")
+    ledger.set_status(book, "a", "closed", "2026-04-01", closure_reason="closed_no_response")
+    assert ledger.response_intervals(book, "LumenForge") == []
+
+
+def test_response_intervals_counts_a_move_off_awaiting_as_a_response():
+    book = _applied_with_company("a", "LumenForge", "2026-01-01")
+    ledger.set_status(book, "a", "phone_screen", "2026-01-10")
+    assert ledger.response_intervals(book, "LumenForge") == [9]
+
+
+def test_response_intervals_excludes_withdrawn():
+    book = _applied_with_company("a", "LumenForge", "2026-01-01")
+    ledger.set_status(book, "a", "closed", "2026-01-20", closure_reason="withdrawn")
+    assert ledger.response_intervals(book, "LumenForge") == []
+
+
+def test_days_since_last_signal_uses_the_later_of_applied_and_last_response():
+    book = _applied_with_company("a", "LumenForge", "2026-01-01")
+    ledger.set_status(book, "a", "phone_screen", "2026-01-10")
+    assert ledger.days_since_last_signal(book["a"], "2026-01-20") == 10
+
+
+def test_days_since_last_signal_falls_back_to_applied_date_with_no_response_yet():
+    book = _applied_with_company("a", "LumenForge", "2026-01-01")
+    assert ledger.days_since_last_signal(book["a"], "2026-01-11") == 10
+
+
+def test_days_since_last_signal_ignores_closed_no_response_as_a_signal():
+    book = _applied_with_company("a", "LumenForge", "2026-01-01")
+    ledger.set_status(book, "a", "closed", "2026-04-01", closure_reason="closed_no_response")
+    # closed_no_response is not a signal; the last real signal is still the apply date.
+    assert ledger.days_since_last_signal(book["a"], "2026-04-05") == 94
+
+
+def test_days_since_last_signal_is_none_without_an_applied_date():
+    book, _ = ledger.sync({}, {"a": "applied"}, "2026-01-01")
+    assert ledger.days_since_last_signal(book["a"], "2026-01-05") is None
+
+
 # --- FIX 4: counts() must not mix "current lane" and "historical fact" axes ---
 
 @pytest.mark.parametrize("lane", ["skipped", "not_applied"])

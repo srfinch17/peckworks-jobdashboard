@@ -81,6 +81,52 @@ INFLATION_PATTERNS = [
 ]
 
 
+# Lesson 31: a banned phrase survived a plain grep because a line wrap split
+# it across two lines - the check looked clean and was not. Normalize before
+# searching rather than hand-adding \s* everywhere in every pattern.
+_WRAP_HYPHEN_RE = re.compile(r"-\s*\n\s*")  # wrap AT a hyphen: keep the hyphen, drop the break
+_WS_RE = re.compile(r"\s+")                 # any other run of whitespace (incl. plain \n): one space
+
+
+def normalize_whitespace(text: str) -> str:
+    """Collapse line wraps and doubled whitespace so a phrase split across a
+    wrap - or across a hyphen at a wrap, e.g. "self-\\nstarter" - still reads
+    as one phrase. A hyphen right before a break is where a hyphenated word
+    (or a hyphenated phrase) was wrapped, so the hyphen is kept and only the
+    break around it is dropped; every other run of whitespace collapses to
+    a single space.
+
+    ponytail: this is not a general soft-hyphenation de-wrapper (it will not
+    rejoin "propri-\\netary" into "proprietary") - the source documents here
+    are plain markdown, not justified typeset text, so wraps only land on
+    real spaces or real hyphens. Extend if a source that does soft-hyphenate
+    shows up.
+    """
+    text = _WRAP_HYPHEN_RE.sub("-", text)
+    return _WS_RE.sub(" ", text).strip()
+
+
+def _context(text: str, start: int, end: int, radius: int = 30) -> str:
+    """Surrounding text for a hit, so the caller can point at it in the
+    document rather than just naming the phrase that matched."""
+    lo = max(0, start - radius)
+    hi = min(len(text), end + radius)
+    prefix = "..." if lo > 0 else ""
+    suffix = "..." if hi < len(text) else ""
+    return f"{prefix}{text[lo:hi]}{suffix}"
+
+
+def assert_removed(after_text: str, phrase: str) -> None:
+    """Raise if `phrase` (whitespace/hyphen-wrap tolerant) still appears in
+    `after_text`. A fix pass calls this on its own output for every phrase
+    it claims to have removed - a no-op fix must fail loudly, not silently
+    pass a clean-looking check."""
+    norm = normalize_whitespace(after_text)
+    needle = normalize_whitespace(phrase).lower()
+    if needle and needle in norm.lower():
+        raise AssertionError(f"fix did not remove phrase: {phrase!r}")
+
+
 def _word_count(text: str) -> int:
     # ponytail: strips the common markdown/URL noise (links, headings, bullets)
     # before counting; not a markdown parser, just enough to stop syntax from
@@ -105,18 +151,36 @@ def envelope(text: str, max_words: int = DEFAULT_MAX_WORDS,
 
 
 def banned_phrases(text: str, banned: list) -> list:
-    low = text.lower()
-    return [phrase for phrase in banned if phrase and phrase.lower() in low]
+    """One dict per hit: {"phrase", "context"}. Matched against whitespace-
+    and wrap-normalized text (see normalize_whitespace) so a phrase split by
+    a line wrap, or by a hyphen at a wrap, is still found - a plain
+    substring search on the raw text is exactly what missed it before."""
+    norm = normalize_whitespace(text)
+    low = norm.lower()
+    hits = []
+    for phrase in banned:
+        if not phrase:
+            continue
+        needle = normalize_whitespace(phrase).lower()
+        idx = low.find(needle)
+        if idx != -1:
+            hits.append({"phrase": phrase, "context": _context(norm, idx, idx + len(needle))})
+    return hits
 
 
 def inflation(text: str) -> list:
+    norm = normalize_whitespace(text)
     hits = []
     for pattern, why in INFLATION_PATTERNS:
         gated = pattern in EMPLOYER_GATED_PATTERNS
-        for match in re.finditer(pattern, text, flags=re.IGNORECASE):
-            if gated and _describes_employer(text, match.start(), match.end()):
+        for match in re.finditer(pattern, norm, flags=re.IGNORECASE):
+            if gated and _describes_employer(norm, match.start(), match.end()):
                 continue
-            hits.append(f"{match.group()} ({why})")
+            hits.append({
+                "match": match.group(),
+                "why": why,
+                "context": _context(norm, match.start(), match.end()),
+            })
     return hits
 
 
@@ -127,6 +191,12 @@ def run_all(text: str, profile: dict) -> list:
         max_words=limits.get("max_words", DEFAULT_MAX_WORDS),
         max_sections=limits.get("max_sections", DEFAULT_MAX_SECTIONS),
     )
-    problems += [f"banned phrase: {p}" for p in banned_phrases(text, profile.get("banned_phrases", []))]
-    problems += [f"inflation: {h}" for h in inflation(text)]
+    problems += [
+        f"banned phrase: {p['phrase']} (context: {p['context']})"
+        for p in banned_phrases(text, profile.get("banned_phrases", []))
+    ]
+    problems += [
+        f"inflation: {h['match']} ({h['why']}) (context: {h['context']})"
+        for h in inflation(text)
+    ]
     return problems
