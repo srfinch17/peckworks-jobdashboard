@@ -421,3 +421,105 @@ def test_main_on_an_initialized_workspace_still_writes_the_dashboard(tmp_path, c
     code = dashboard.main([str(tmp_path), "--no-open"])
     assert code == 0
     assert (tmp_path / "CareerDashboard.html").exists()
+
+
+# --- FIX 5: reachable bad states must degrade gracefully, never a raw traceback ---
+
+def test_a_malformed_applied_date_does_not_crash_the_build(tmp_path):
+    import ledger
+    config = workspace.init(tmp_path)
+    (workspace.lane_dir(tmp_path, config, "applied") / "8_Riot_LA_ConceptArtist").mkdir()
+    dashboard.build(tmp_path, "2026-01-10")
+    book = ledger.load(tmp_path / "job_ledger.json")
+    book["8_Riot_LA_ConceptArtist"]["applied_date"] = "2026-13-45"
+    ledger.save(tmp_path / "job_ledger.json", book)
+    html_doc = dashboard.build(tmp_path, "2026-01-15")
+    assert "Riot" in html_doc
+
+
+def test_main_on_a_corrupt_job_ledger_gives_a_friendly_message(tmp_path, capsys):
+    workspace.init(tmp_path)
+    (tmp_path / "job_ledger.json").write_text("{not valid json", encoding="utf-8")
+    code = dashboard.main([str(tmp_path), "--no-open"])
+    out = capsys.readouterr().out
+    assert code == 2
+    assert "traceback" not in out.lower()
+    assert "job_ledger.json" in out
+
+
+def test_build_survives_a_ledger_entry_missing_its_history_key(tmp_path):
+    import ledger
+    config = workspace.init(tmp_path)
+    applied_dir = workspace.lane_dir(tmp_path, config, "applied") / "8_Riot_LA_ConceptArtist"
+    applied_dir.mkdir()
+    dashboard.build(tmp_path, "2026-01-10")
+    book = ledger.load(tmp_path / "job_ledger.json")
+    del book["8_Riot_LA_ConceptArtist"]["history"]
+    ledger.save(tmp_path / "job_ledger.json", book)
+    # Move it to a still-rendered lane so the "moved" event actually
+    # exercises the history.append() codepath that used to KeyError.
+    applied_dir.rename(workspace.lane_dir(tmp_path, config, "staged") / "8_Riot_LA_ConceptArtist")
+    html_doc = dashboard.build(tmp_path, "2026-01-11")
+    assert "Riot" in html_doc
+
+
+def test_build_survives_a_ledger_entry_that_is_a_string_not_an_object(tmp_path):
+    import ledger
+    config = workspace.init(tmp_path)
+    (workspace.lane_dir(tmp_path, config, "staged") / "7_Pixar_Emeryville_Modeler").mkdir()
+    dashboard.build(tmp_path, "2026-01-10")
+    book = ledger.load(tmp_path / "job_ledger.json")
+    book["9_Ghost_Remote_Job"] = "this is not a real ledger entry"
+    ledger.save(tmp_path / "job_ledger.json", book)
+    html_doc = dashboard.build(tmp_path, "2026-01-11")
+    assert "Pixar" in html_doc
+
+
+def test_main_with_lanes_removed_from_config_gives_a_friendly_message(tmp_path, capsys):
+    import json
+    workspace.init(tmp_path)
+    cfg_path = tmp_path / "jobkit.json"
+    cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+    del cfg["lanes"]
+    cfg_path.write_text(json.dumps(cfg), encoding="utf-8")
+    code = dashboard.main([str(tmp_path), "--no-open"])
+    out = capsys.readouterr().out
+    assert code == 2
+    assert "traceback" not in out.lower()
+    assert "jobkit.json" in out
+
+
+def test_main_on_a_permission_error_while_saving_the_ledger_gives_a_friendly_message(
+    tmp_path, capsys, monkeypatch
+):
+    """Stands in for a read-only job_ledger.json (common under Dropbox/OneDrive):
+    monkeypatching the failure keeps the test deterministic across platforms
+    where making a file genuinely read-only behaves differently."""
+    import ledger
+    workspace.init(tmp_path)
+
+    def boom(*args, **kwargs):
+        raise PermissionError("Access is denied")
+
+    monkeypatch.setattr(ledger, "save", boom)
+    code = dashboard.main([str(tmp_path), "--no-open"])
+    out = capsys.readouterr().out
+    assert code == 2
+    assert "traceback" not in out.lower()
+
+
+# --- FIX 6: a future applied_date must not render as a negative day count ---
+
+def test_a_future_applied_date_does_not_render_as_negative_days(tmp_path):
+    import ledger
+    config = workspace.init(tmp_path)
+    folder = workspace.lane_dir(tmp_path, config, "applied") / "8_Riot_LA_ConceptArtist"
+    folder.mkdir()
+    dashboard.build(tmp_path, "2026-01-10")
+    book = ledger.load(tmp_path / "job_ledger.json")
+    book["8_Riot_LA_ConceptArtist"]["applied_date"] = "2026-06-01"
+    ledger.save(tmp_path / "job_ledger.json", book)
+    html_doc = dashboard.build(tmp_path, "2026-01-15")
+    waiting_section = _section_html(html_doc, "active")
+    assert "future" in waiting_section
+    assert re.search(r"-\d+ days", waiting_section) is None

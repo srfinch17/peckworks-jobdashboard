@@ -179,6 +179,11 @@ def build(root, today: str = None) -> str:
 
     ledger.save(root / "job_ledger.json", book)
 
+    good_book = {f: e for f, e in book.items() if isinstance(e, dict)}
+    if len(good_book) != len(book):
+        print(f"dashboard: skipping {len(book) - len(good_book)} unreadable ledger "
+              "record(s) (not a JSON object)")
+
     def card(folder: str, entry: dict) -> dict:
         lane = entry.get("lane", "missing")
         waited = ledger.days_since(entry.get("applied_date"), today)
@@ -200,10 +205,18 @@ def build(root, today: str = None) -> str:
             "folder_uri": _folder_uri(root, config, lane, folder) if lane in config["lanes"] else "",
         }
 
-    cards = {folder: card(folder, entry) for folder, entry in book.items()}
+    cards = {}
+    for folder, entry in good_book.items():
+        try:
+            cards[folder] = card(folder, entry)
+        except Exception as exc:
+            # One bad record (an unexpected field type, an unreadable date
+            # that even days_since's own guard didn't anticipate, ...) must
+            # never take the whole dashboard down for every other job.
+            print(f"dashboard: skipping ledger record {folder!r} ({exc})")
 
-    staged = [cards[f] for f, e in book.items() if e.get("lane") == "staged"]
-    applied = [(f, e) for f, e in book.items() if e.get("lane") == "applied"]
+    staged = [cards[f] for f, e in good_book.items() if f in cards and e.get("lane") == "staged"]
+    applied = [(f, e) for f, e in good_book.items() if f in cards and e.get("lane") == "applied"]
     active_all = [cards[f] for f, e in applied if e.get("status") != "closed"]
     closed = [cards[f] for f, e in applied if e.get("status") == "closed"]
 
@@ -566,8 +579,13 @@ def _card(c: dict, section: str) -> str:
     elif section == "active":
         chips.append(f'<span class="chip">{_applied_chip_text(c["applied_date"])}</span>')
         if c["days_waiting"] is not None:
-            cls = "chip stale" if c["stale"] else "chip"
-            chips.append(f'<span class="{cls}">{c["days_waiting"]} days</span>')
+            if c["days_waiting"] < 0:
+                # A hand-typed applied_date in the future - "-26448 days" is
+                # meaningless to a user, so flag it instead of rendering it.
+                chips.append('<span class="chip stale">applied date is in the future</span>')
+            else:
+                cls = "chip stale" if c["stale"] else "chip"
+                chips.append(f'<span class="{cls}">{c["days_waiting"]} days</span>')
     elif section == "closed":
         chips.append(f'<span class="chip">{_applied_chip_text(c["applied_date"])}</span>')
         if c["closed_date"]:
@@ -698,7 +716,27 @@ def main(argv: list) -> int:
         return 2
 
     out = root / "CareerDashboard.html"
-    out.write_text(build(root), encoding="utf-8")
+    try:
+        html = build(root)
+    except KeyError as exc:
+        print(f"jobkit.json at {root} is missing required key {exc}. "
+              "Run setup again, or restore jobkit.json from a backup.")
+        return 2
+    except json.JSONDecodeError as exc:
+        print(f"job_ledger.json at {root} is unreadable ({exc}). "
+              "Fix or remove that file, then try again.")
+        return 2
+    except PermissionError as exc:
+        print(f"Could not write in {root} ({exc}). A synced folder (Dropbox "
+              "or OneDrive) can lock files; close anything using them and try again.")
+        return 2
+
+    try:
+        out.write_text(html, encoding="utf-8")
+    except PermissionError as exc:
+        print(f"Could not write {out} ({exc}). A synced folder (Dropbox "
+              "or OneDrive) can lock files; close anything using them and try again.")
+        return 2
     print(f"Dashboard -> {out}")
     if "--no-open" not in argv:
         webbrowser.open(out.as_uri())

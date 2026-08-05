@@ -25,7 +25,7 @@ import sqlite3
 import sys
 import tempfile
 from pathlib import Path
-from urllib.parse import unquote
+from urllib.parse import unquote, urlparse
 
 CHROME_EPOCH_OFFSET = 11644473600  # seconds between 1601-01-01 and 1970-01-01
 DASHBOARD_BASENAME = "careerdashboard.html"
@@ -82,6 +82,30 @@ def _load(root: Path) -> dict:
     return {"watermark": 0, "pages": {}, "daily": {}}
 
 
+def _file_url_to_path(url: str) -> str:
+    """file:// URL -> filesystem path, POSIX or Windows drive-letter form.
+
+    Deliberately not the platform's own url2pathname: this converts a URL a
+    macOS Chrome wrote while the code happens to run on Windows (or vice
+    versa), so it cannot depend on the host platform's own path rules.
+    urlparse().path already strips the query/fragment and leaves percent
+    escapes for unquote() to resolve.
+    """
+    raw = unquote(urlparse(url).path)
+    if len(raw) >= 3 and raw[0] == "/" and raw[2] == ":":
+        raw = raw[1:]  # "/C:/Users/<name>" -> "C:/Users/<name>"
+    return raw
+
+
+def _is_under(path: str, root_url: str) -> bool:
+    """True if `path` is root_url itself or something inside it.
+
+    A plain startswith() would let "/Users/<name>/JobSearchPrivate" match
+    root "/Users/<name>/JobSearch" - require a path-separator boundary.
+    """
+    return path == root_url or path.startswith(root_url + "/")
+
+
 def harvest(root: Path) -> dict:
     """Merge new browser visits under `root` into reading_stats.json; return stats.
 
@@ -89,25 +113,33 @@ def harvest(root: Path) -> dict:
     plugin directory, not the workspace, so it cannot be inferred from __file__).
     """
     root = Path(root)
-    stats = _load(root)
+    stats = {"watermark": 0, "pages": {}, "daily": {}}
     try:
+        stats = _load(root)
         history = next((p for p in candidate_history_paths() if p.exists()), None)
         if history is None:
             return stats  # no supported browser installed; not an error
-        tmp = Path(tempfile.gettempdir()) / "jobkit_chrome_history_copy"
-        shutil.copy2(history, tmp)  # snapshot; the live DB is locked while the browser runs
-        con = sqlite3.connect(tmp)
-        rows = con.execute(
-            "SELECT u.url, v.visit_time FROM visits v JOIN urls u ON u.id = v.url "
-            "WHERE u.url LIKE 'file:///%' AND v.visit_time > ?", (stats["watermark"],)
-        ).fetchall()
-        con.close()
 
         root_url = root.resolve().as_posix().lower()
         wm = stats["watermark"]
+        # The live DB is locked while the browser runs, so it is copied first.
+        # A TemporaryDirectory (not a fixed path) so the copy - a snapshot of
+        # every URL the user has ever visited - never outlives this call.
+        with tempfile.TemporaryDirectory(prefix="jobkit_chrome_history_") as tmp_dir:
+            tmp = Path(tmp_dir) / "History"
+            shutil.copy2(history, tmp)
+            con = sqlite3.connect(tmp)
+            try:
+                rows = con.execute(
+                    "SELECT u.url, v.visit_time FROM visits v JOIN urls u ON u.id = v.url "
+                    "WHERE u.url LIKE 'file:///%' AND v.visit_time > ?", (stats["watermark"],)
+                ).fetchall()
+            finally:
+                con.close()
+
         for url, vt in rows:
-            path = unquote(url.split("?")[0].split("#")[0])[8:].lower()  # strip file:///
-            if not path.startswith(root_url) or not path.endswith(".html"):
+            path = _file_url_to_path(url).lower()
+            if not _is_under(path, root_url) or not path.endswith(".html"):
                 continue  # outside the workspace, or not an html page: discard, never stored
             base = os.path.basename(path)
             if base == DASHBOARD_BASENAME:

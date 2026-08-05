@@ -33,6 +33,15 @@ STATUSES = (
 
 CLOSURE_REASONS = ("rejected", "closed_no_response", "withdrawn")
 
+# Lanes that mean "I have not applied to this." A status change that implies
+# an application (anything but "none") is refused while a folder sits here -
+# see set_status. staged means "not yet"; skipped/not_applied mean "chose
+# not to." expired is deliberately absent: a job that WAS applied to and
+# then died is archived there, and that history must survive the move.
+NOT_APPLIED_LANES = ("staged", "skipped", "not_applied")
+
+INTERVIEW_STATUSES = ("phone_screen", "interview_scheduled", "interviewed")
+
 
 def load(path) -> dict:
     path = Path(path)
@@ -61,7 +70,10 @@ def sync(book: dict, on_disk: dict, today: str) -> tuple[dict, list]:
 
     for folder, lane in on_disk.items():
         entry = book.get(folder)
-        if entry is None:
+        if not isinstance(entry, dict):
+            # Missing, or a corrupted record (e.g. hand-edited into a plain
+            # string) - either way nothing in it can be trusted, so it is
+            # treated as never seen before rather than crashing the sync.
             entry = {
                 "lane": lane,
                 "status": "none",
@@ -81,7 +93,7 @@ def sync(book: dict, on_disk: dict, today: str) -> tuple[dict, list]:
             continue
 
         entry["lane"] = lane
-        entry["history"].append(f"{today}: {previous} -> {lane}")
+        entry.setdefault("history", []).append(f"{today}: {previous} -> {lane}")
         events.append(("moved", folder, lane))
 
         if lane == "applied" and "applied_date" not in entry:
@@ -94,9 +106,11 @@ def sync(book: dict, on_disk: dict, today: str) -> tuple[dict, list]:
     for folder, entry in book.items():
         if folder in on_disk:
             continue
+        if not isinstance(entry, dict):
+            continue  # corrupted record for a folder that isn't on disk either; nothing to do
         if entry.get("lane") == "missing":
             continue
-        entry["history"].append(f"{today}: folder not found -> missing")
+        entry.setdefault("history", []).append(f"{today}: folder not found -> missing")
         entry["lane"] = "missing"
         events.append(("missing", folder, "missing"))
 
@@ -117,6 +131,14 @@ def set_status(book: dict, folder: str, status: str, today: str, closure_reason=
         raise ValueError("closure_reason only applies when status is 'closed'")
 
     entry = book[folder]
+    if status != "none" and entry.get("lane") in NOT_APPLIED_LANES:
+        # This is the source of the impossible ribbon: a status implying an
+        # application (awaiting, interviewed, closed/rejected, ...) hand-set
+        # on a folder sitting in a lane that means "never applied to it."
+        raise ValueError(
+            f"cannot set status {status!r} on {folder!r}: it is in the "
+            f"{entry.get('lane')!r} lane, which means it was never applied to"
+        )
     previous = entry.get("status", "none")
     entry["status"] = status
     # status_date tracks the most recent status change, e.g. the date a job
@@ -127,6 +149,13 @@ def set_status(book: dict, folder: str, status: str, today: str, closure_reason=
         entry["closure_reason"] = closure_reason
     if status == "closed":
         entry["closed_date"] = today
+    # These two are historical facts, same reasoning as closure_reason: an
+    # interview or an offer does not stop having happened just because the
+    # job later closes or its folder moves on. Set once, never cleared.
+    if status in INTERVIEW_STATUSES:
+        entry["ever_interviewed"] = True
+    if status == "offer":
+        entry["ever_offer"] = True
 
     label = f"{status} ({closure_reason})" if closure_reason else status
     entry.setdefault("history", []).append(f"{today}: {previous} -> {label}")
@@ -140,6 +169,20 @@ def resolve(book: dict, fragment: str) -> list:
 
 
 def counts(book: dict) -> dict:
+    # Two axes live in here on purpose, and the fix is to never let them
+    # contradict each other:
+    #   - "WHERE is it now": staged/not_applied/skipped/expired/missing/
+    #     in_flight. Reset by a lane move; this is current placement.
+    #   - "WHAT has happened to it, ever": applied/interviews/offers/
+    #     rejected/closed_no_response/withdrawn. A fact, once true, stays
+    #     true no matter where the folder sits later - archiving a rejected
+    #     job into "expired" must not make it un-applied-to.
+    # Before this fix "applied" was axis 1 (current lane) while "rejected"
+    # was axis 2 (historical), so a rejected-then-archived job could show
+    # 0 applied and 1 rejected: rejections from jobs the board claims were
+    # never applied to. Every WHAT-happened field below is now keyed off
+    # `status`, which set_status only ever advances past "none" for a
+    # folder that is (or was, per NOT_APPLIED_LANES) actually applied to.
     tally = {
         "staged": 0,
         "applied": 0,
@@ -155,11 +198,24 @@ def counts(book: dict) -> dict:
         "withdrawn": 0,
     }
     for entry in book.values():
+        if not isinstance(entry, dict):
+            continue  # a corrupted record; nothing safe to count here
         lane = entry.get("lane", "missing")
-        if lane in tally:
+        if lane in tally and lane != "applied":
             tally[lane] += 1
 
         status = entry.get("status", "none")
+        if status != "none":
+            # A real application happened at some point - set_status
+            # refuses to reach here for a folder that never left staged/
+            # skipped/not_applied, and sync() only sets it for an observed
+            # or first-seen move into "applied". Historical, like rejected.
+            tally["applied"] += 1
+        if entry.get("ever_interviewed"):
+            tally["interviews"] += 1
+        if entry.get("ever_offer"):
+            tally["offers"] += 1
+
         if status == "closed":
             # A rejection (or any other closure) is a historical fact. It does
             # not stop having happened because the folder was later archived
@@ -169,33 +225,24 @@ def counts(book: dict) -> dict:
                 tally[reason] += 1
             continue
 
-        # "Waiting to hear back" takes BOTH fields, because neither alone is
-        # enough:
-        #   status != "none"  -> it has been applied to and (the branch above
-        #     already returned for "closed") not closed. But status only ever
-        #     moves forward, so it never decays when the job stops being live.
-        #   lane in (applied, missing) -> it is still somewhere consistent
-        #     with a live application. A folder sitting in expired/skipped/
-        #     not_applied/staged is not being waited on, whatever its stale
-        #     status says. "missing" counts because nothing closed it - the
-        #     folder was just tidied away, and dropping it would read as good
-        #     news ("one fewer thing to wait on") when nothing resolved.
-        # applied_date is deliberately NOT used: sync() leaves it unset when a
-        # folder is first seen already in the applied lane, and that is still
-        # a real open application.
+        # "Waiting to hear back" is current placement, not a historical fact:
+        # it must decay once the job resolves or the folder is filed away
+        # somewhere that no longer means "still open" (expired/skipped/
+        # not_applied/staged). "missing" still counts because nothing
+        # resolved it - the folder was just tidied away, and dropping it
+        # would read as good news ("one fewer thing to wait on") when
+        # nothing actually happened.
         if status != "none" and lane in ("applied", "missing"):
             tally["in_flight"] += 1
-            if status in ("interview_scheduled", "interviewed"):
-                tally["interviews"] += 1
-
-        # offers stays gated on current lane == "applied" - confirmed
-        # correct by the reviewer, left untouched by the in_flight fix.
-        if lane == "applied" and status == "offer":
-            tally["offers"] += 1
     return tally
 
 
 def days_since(date_str, today: str):
+    """None for an unset, non-string, or unparseable date - a hand-typed
+    typo like "2026-13-45" must degrade a single chip, not crash the build."""
     if not date_str:
         return None
-    return (date.fromisoformat(today) - date.fromisoformat(date_str)).days
+    try:
+        return (date.fromisoformat(today) - date.fromisoformat(date_str)).days
+    except (ValueError, TypeError):
+        return None
