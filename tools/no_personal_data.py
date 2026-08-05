@@ -49,6 +49,8 @@ PLACEHOLDER_ALLOWLIST: set[tuple[str, str]] = {
 # same line - a real, non-public mention - still stops the commit.
 FORBIDDEN_LINE_ALLOWLIST: set[tuple[str, str]] = {
     ("README.md", "/plugin marketplace add srfinch17/peckworks-jobdashboard"),
+    ("docs/LESSONS_HARVEST.md",
+     "`github.com/srfinch17/peckworks-skills-laboratory` (nemesis-review, paladin-review,"),
 }
 
 SKIP_DIRS = {".git", "__pycache__", "node_modules", "vendor", ".venv", ".pytest_cache"}
