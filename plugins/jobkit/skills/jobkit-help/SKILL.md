@@ -20,9 +20,17 @@ rest, it will not work yet.
 
 - **Paste a job link** — JobKit reads the posting, scores the fit, and files it.
 - **"Build the application for the Pixar one"** — tailors a resume from the baseline.
-- **"I applied to the Pixar one"** — moves it to the applied lane.
-- **"Here's a rejection email"** *(paste it)* — records it and files the email.
-- **"They want to schedule an interview"** — creates an interview card.
+- **"I applied to the Pixar one"** — moves it to the applied lane; the apply date is
+  set from that move, never typed in.
+- **"Here's a rejection email"** *(paste it)* — records it and files the email. A
+  closure by silence ("no word in two months") is recorded separately and never
+  counted as a rejection.
+- **"They want to schedule an interview"** — creates an interview card, with the
+  date left pending until a real slot is confirmed.
+- **"It's Tuesday at 9"** — records the confirmed interview slot.
+- **"The interview happened"** — marks it interviewed and adds a debrief to the job's notes.
+- **"I got an offer"** — records the offer.
+- **"I withdrew" / "I pulled out"** — closes it as withdrawn.
 - **"Open my dashboard"** — regenerates and opens the HTML dashboard.
 
 ## Anytime

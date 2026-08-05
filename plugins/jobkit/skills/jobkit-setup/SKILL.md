@@ -21,7 +21,28 @@ Assume the user is not technical. No jargon. One question at a time.
 - **You are not judging them.** No feedback on their answers, no encouragement,
   no "great!". A colleague taking notes.
 
-## Step 1, the workspace path
+## Step 1, the environment check
+
+Do this FIRST, before anything else touches disk. Check and REPORT. Never
+hard-fail; a tool that refuses to start gets uninstalled.
+
+```bash
+python3 --version
+```
+
+If that fails, JobKit cannot run. Say so plainly: modern macOS (12.3+) ships
+only `python3`, never bare `python`, and every command JobKit runs uses
+`python3` for exactly that reason. If `python3 --version` fails here too, tell
+them to install Python 3 before continuing and stop.
+
+Report what is present and what is missing, with the exact command to fix each.
+`python-docx` and `reportlab` are only needed for Word and PDF output, say that
+plainly and say text files work without them.
+
+Check whether a browser automation tool is available. If not, say what still works
+without it: pasted text and structured job-board data, which is most of the value.
+
+## Step 2, the workspace path
 
 Ask where they want it. Suggest `~/JobDashboard`. Confirm the full path back to
 them before creating anything.
@@ -29,7 +50,7 @@ them before creating anything.
 Then run:
 
 ```bash
-python -c "import sys; sys.path.insert(0, r'${CLAUDE_PLUGIN_ROOT}/scripts'); import workspace; workspace.init(r'<path>')"
+python3 -c "import sys; sys.path.insert(0, r'${CLAUDE_PLUGIN_ROOT}/scripts'); import workspace; workspace.init(r'<path>')"
 ```
 
 This creates the five lane folders (jobs to apply to, applied, not applied,
@@ -41,21 +62,6 @@ user at them and say they can edit `CLAUDE.md` any time to change how JobKit
 behaves for them.
 
 **Store the path.** Every later command needs it. Nothing is ever written outside it.
-
-## Step 2, the environment check
-
-Check and REPORT. Never hard-fail; a tool that refuses to start gets uninstalled.
-
-```bash
-python3 --version
-```
-
-Report what is present and what is missing, with the exact command to fix each.
-`python-docx` and `reportlab` are only needed for Word and PDF output, say that
-plainly and say text files work without them.
-
-Check whether a browser automation tool is available. If not, say what still works
-without it: pasted text and structured job-board data, which is most of the value.
 
 ## Step 3, tell them about read tracking
 
@@ -112,7 +118,7 @@ write the answer down verbatim.
 ## Step 6, first dashboard
 
 ```bash
-python "${CLAUDE_PLUGIN_ROOT}/scripts/dashboard.py" "<workspace-path>"
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/dashboard.py" "<workspace-path>"
 ```
 
 This writes `CareerDashboard.html` in the workspace root and opens it in their

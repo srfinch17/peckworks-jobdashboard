@@ -105,7 +105,7 @@ fell back to.
 ## 6. Refresh the dashboard
 
 ```bash
-python "${CLAUDE_PLUGIN_ROOT}/scripts/dashboard.py" "<workspace-path>" --no-open
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/dashboard.py" "<workspace-path>" --no-open
 ```
 
 Always. `--no-open` skips launching the browser since this runs mid-conversation;

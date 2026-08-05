@@ -54,7 +54,7 @@ read, and skipping it keeps the build fast.
 ## Run the checks before you show them anything
 
 ```bash
-python "${CLAUDE_PLUGIN_ROOT}/scripts/check_document.py" "<job-folder>/Resume_<Company>_<Role>.txt" "<workspace>/profile.json"
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/check_document.py" "<job-folder>/Resume_<Company>_<Role>.txt" "<workspace>/profile.json"
 ```
 
 If it exits nonzero, **fix the document and run it again.** Do not show the user a
@@ -71,7 +71,7 @@ every time is a prompt the user learns to ignore.
 ## Refresh the dashboard
 
 ```bash
-python "${CLAUDE_PLUGIN_ROOT}/scripts/dashboard.py" "<workspace-path>" --no-open
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/dashboard.py" "<workspace-path>" --no-open
 ```
 
 ## Then say the quiet part

@@ -2,7 +2,7 @@
 """Refuse a generated document that breaks the user's own rules.
 
 Usage:
-  python check_document.py <document.txt> <profile.json>
+  python3 check_document.py <document.txt> <profile.json>
 
 Exit 0 = clean. Exit 1 = problems listed on stdout.
 """
@@ -15,7 +15,7 @@ import checks
 
 def main(argv: list) -> int:
     if len(argv) < 2:
-        print("Usage: python check_document.py <document.txt> <profile.json>")
+        print("Usage: python3 check_document.py <document.txt> <profile.json>")
         return 2
 
     document = Path(argv[0])
