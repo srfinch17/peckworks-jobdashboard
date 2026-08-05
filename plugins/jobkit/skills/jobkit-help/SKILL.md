@@ -37,8 +37,8 @@ generates, not only this reference card:
 ## Every day
 
 - **Paste a job link** - JobKit reads the posting, scores the fit, and files it.
-- **"Build the application for the Pixar one"** - tailors a resume from the baseline.
-- **"I applied to the Pixar one"** - moves it to the applied lane; the apply date is
+- **"Build the application for the LumenForge one"** - tailors a resume from the baseline.
+- **"I applied to the LumenForge one"** - moves it to the applied lane; the apply date is
   set from that move, never typed in.
 - **"Here's a rejection email"** *(paste it)* - records it and files the email. A
   closure by silence ("no word in two months") is recorded separately and never
