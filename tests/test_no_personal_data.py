@@ -98,6 +98,54 @@ def test_forbidden_line_allowlist_permits_only_its_own_line(tmp_path):
     assert hits == [(Path("README.md"), 12, "forbidden string", "Finch")]
 
 
+def test_install_command_line_does_not_block(tmp_path):
+    """Scenario 1: the real install-command line is exempt where it lives."""
+    (tmp_path / "README.md").write_text(
+        "intro\n\n/plugin marketplace add srfinch17/peckworks-jobdashboard\nmore\n",
+        encoding="utf-8",
+    )
+    hits = npd.scan(tmp_path, ["srfinch17"])
+    assert hits == []
+
+
+def test_line_number_shift_does_not_carry_the_exemption(tmp_path):
+    """Scenario 2 (the regression): a line-number-keyed exemption would still
+
+    cover whatever content lands on the old line number after an edit shifts
+    everything down. Content-keying must not make that mistake: a genuine
+    personal mention placed on the install command's old line number is
+    still caught, whether or not the install command is present elsewhere.
+    """
+    lines = ["filler\n"] * 10
+    lines.append("Written by Scott Finch, srfinch17.\n")  # lands on line 11
+    (tmp_path / "README.md").write_text("".join(lines), encoding="utf-8")
+    hits = npd.scan(tmp_path, ["srfinch17"])
+    assert any(
+        rel == Path("README.md") and lineno == 11 and found == "srfinch17"
+        for rel, lineno, _, found in hits
+    ), "a real personal mention landing on the old exempted line number must still be caught"
+
+
+def test_personal_mention_elsewhere_in_readme_is_caught(tmp_path):
+    """Scenario 3: the exemption must not leak to other lines of README.md."""
+    (tmp_path / "README.md").write_text(
+        "/plugin marketplace add srfinch17/peckworks-jobdashboard\n"
+        "Contact srfinch17 directly for support.\n",
+        encoding="utf-8",
+    )
+    hits = npd.scan(tmp_path, ["srfinch17"])
+    assert hits == [(Path("README.md"), 2, "forbidden string", "srfinch17")]
+
+
+def test_install_command_text_in_other_file_is_caught(tmp_path):
+    """Scenario 4: the exemption is scoped to README.md, not the text itself."""
+    (tmp_path / "NOTES.md").write_text(
+        "/plugin marketplace add srfinch17/peckworks-jobdashboard\n", encoding="utf-8",
+    )
+    hits = npd.scan(tmp_path, ["srfinch17"])
+    assert hits == [(Path("NOTES.md"), 1, "forbidden string", "srfinch17")]
+
+
 def test_missing_local_list_fails_closed():
     """A fork without the local list must FAIL, never silently pass."""
     import os

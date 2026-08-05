@@ -37,15 +37,18 @@ PLACEHOLDER_ALLOWLIST: set[tuple[str, str]] = {
 }
 
 # Same idea as PLACEHOLDER_ALLOWLIST, but for hits from the local forbidden-
-# strings file rather than the ALWAYS patterns, and keyed with a line number:
-# a forbidden identity fragment is a false positive here only because it is a
-# substring of the GitHub owner/repo name, which forbidden_strings.local.txt
-# itself documents as deliberately public (it is already in the repo URL and
-# the git remote) and asks reviewers not to block on. Line-scoped so the same
-# fragment appearing anywhere else in the file - a real, non-public mention -
-# still stops the commit.
-FORBIDDEN_LINE_ALLOWLIST: set[tuple[str, int]] = {
-    ("README.md", 11),  # the /plugin marketplace add ... install command
+# strings file rather than the ALWAYS patterns: a forbidden identity fragment
+# is a false positive here only because it is a substring of the GitHub
+# owner/repo name, which forbidden_strings.local.txt itself documents as
+# deliberately public (it is already in the repo URL and the git remote) and
+# asks reviewers not to block on. Keyed by (relative path, exact stripped
+# line content) - NOT by line number, which shifts every time the file is
+# edited above it and would silently re-point the exemption at unrelated
+# content. Content-keyed so the same install-command text appearing on any
+# other line, in any other file, or replaced by different content on this
+# same line - a real, non-public mention - still stops the commit.
+FORBIDDEN_LINE_ALLOWLIST: set[tuple[str, str]] = {
+    ("README.md", "/plugin marketplace add srfinch17/peckworks-jobdashboard"),
 }
 
 SKIP_DIRS = {".git", "__pycache__", "node_modules", "vendor", ".venv", ".pytest_cache"}
@@ -117,7 +120,7 @@ def scan(repo: Path, forbidden: list[str]) -> list[tuple[Path, int, str, str]]:
                     if (rel_posix, found) in PLACEHOLDER_ALLOWLIST:
                         continue
                     hits.append((rel, lineno, label, found))
-            if (rel_posix, lineno) in FORBIDDEN_LINE_ALLOWLIST:
+            if (rel_posix, line.strip()) in FORBIDDEN_LINE_ALLOWLIST:
                 continue
             low = line.lower()
             for original, term in zip(forbidden, terms):
