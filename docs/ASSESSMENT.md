@@ -16,17 +16,17 @@ JSON sidecars. Rough shape:
 | `job_tracker.py` | 319 | YES as a design, but REBUILD (its content-hash keying is a known defect) |
 | `freshness_check.py` | 113 | YES |
 | `resume_audit.py`, `sent_integrity.py`, `guard_sent_resumes.py` | 158 | YES as a pattern (mechanical guards), rules become config |
-| `reading_stats.py` | 70 | **HARD NO.** Mines Chrome history. Fine on your own machine, not something you ship to someone else. |
+| `reading_stats.py` | 70 | **HARD NO** (2026-08-01). Mines Chrome history. Fine on your own machine, not something you ship to someone else. **Reversed 2026-08-04** at the owner's request: ships ON by default. Narrower than what was rejected here: only `file://` visits under the workspace are recorded, everything else is discarded unread, nothing is uploaded, the temp copy of the history database is deleted after each harvest, it is disclosed in the README and during setup, and it is switchable off via `features.reading_stats`. |
 | CLAUDE.md operating rules | 963 | The most valuable asset here. See `LESSONS_HARVEST.md`. |
 
 **The genuinely valuable thing is not the code. It is the 963 lines of hard-won rules.** Most of
 that code is a weekend to rewrite cleanly. The rules took six months and several expensive
 mistakes to learn.
 
-## 2. The open gate: nobody has talked to Benny
+## 2. The open gate: nobody has talked to the first user
 
 This project was assessed once before (2026-07-19) and deliberately shelved pending a ~30 minute
-requirements conversation with Benny or his dad. **That conversation still has not happened.**
+requirements conversation with the first user. **That conversation still has not happened.**
 
 Why it mattered then and still matters:
 
@@ -40,7 +40,7 @@ industry, whether he has a portfolio site, and freelance versus studio mix.
 **How this plan proceeds anyway, without guessing:** the engine is built domain-neutral and every
 domain-specific thing becomes DATA, produced by an onboarding interview and stored in
 `profile.json`. Job sources, application artifact types, what a "fit" means, the vocabulary on the
-dashboard: all config. If Benny turns out to need something different, that is an edit to a JSON
+dashboard: all config. If the first user turns out to need something different, that is an edit to a JSON
 file and a prompt, not a rewrite.
 
 **The one thing that cannot be deferred:** the piece-selection feature (section 3). Build it and
@@ -77,6 +77,12 @@ their documented public JSON endpoints, which are stable and meant to be read.
 **No Chrome history mining.** `reading_stats.py` is clever on your own machine and unacceptable in
 a distributed tool. Dropped entirely.
 
+**Amendment, 2026-08-04.** Reversed at the owner's request. The feature ships ON by default. What
+makes the shipped version narrower than what was rejected above: only `file://` visits under the
+workspace are recorded, everything else is discarded unread; nothing is uploaded; the temporary
+copy of the history database is deleted after each harvest; it is disclosed in the README and
+during setup; and it is switchable off via `features.reading_stats` in `jobkit.json`.
+
 **The tool never generates art and never edits portfolio files.** It reads an inventory the user
 writes. It can suggest ordering and selection. It cannot produce a "piece." Non-negotiable, both
 ethically and because a tool that does this gets the user blacklisted in art communities.
@@ -96,12 +102,12 @@ The request is "get it done today." Honest numbers:
 
 - **Full parity with the source workspace: 2 to 3 weekends.** That estimate was made in July and
   nothing since has made it smaller.
-- **A real, usable v0 that Benny could actually run: one focused evening**, if scoped to
+- **A real, usable v0 that the first user could actually run: one focused evening**, if scoped to
   onboarding + intake + one build + a dashboard, with materials as .txt only.
 - **docx/pdf generation adds an evening** on its own, mostly because the layout rules are fiddly
   and the source `generate.py` needs its personal assumptions stripped.
 
 `BUILD_PLAN.md` scopes v0 to what genuinely fits in an evening and phases the rest. The risk of
 trying to do all of it tonight is the usual one: three things at 70 percent instead of four at
-100, and nothing Benny can actually open.
+100, and nothing the first user can actually open.
 

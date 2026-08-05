@@ -1,4 +1,4 @@
-# JobKit — Design
+# JobKit - Design
 
 Written 2026-08-02. Supersedes the shape described in `docs/ARCHITECTURE.md` where the two
 disagree (see "Changes from the 2026-08-01 docs" at the end).
@@ -11,8 +11,8 @@ A Claude Code plugin that turns an empty folder into a job-search workspace. The
 job links; the plugin builds a tracked folder per job with a tailored resume, keeps a ledger,
 and regenerates a self-contained `CareerDashboard.html` that opens by double-click.
 
-**First user:** Benny, a graphics artist, on a Mac, non-technical, using Claude Desktop's Code
-tab. He has a portfolio hosted elsewhere; the plugin never touches it.
+**First user:** a graphics artist, on a Mac, using Claude Desktop's Code
+tab. Has a portfolio hosted elsewhere; the plugin never touches it.
 
 **Origin:** a genericized rebuild of a private workspace that has run ~95 applications since
 early 2026. The structure and the operating rules transfer. No personal content transfers.
@@ -26,7 +26,7 @@ that claims to be the user's creative work.
 ## 2. Distribution: one plugin, no MCP server
 
 A **plugin** is a directory bundling skills, commands, hooks, and scripts, installed from a
-marketplace repo. A **skill** is a `SKILL.md` file — procedural instructions loaded on demand.
+marketplace repo. A **skill** is a `SKILL.md` file - procedural instructions loaded on demand.
 An **MCP server** is a running process exposing callable tools.
 
 This product is a workflow plus a large body of operating rules. Rules are markdown, not
@@ -111,10 +111,10 @@ inferring it from the current directory.
 
 Three layers, most specific wins:
 
-1. **Plugin skills** — shipped, versioned, updated by git pull
-2. **`jobkit.json` / `profile.json`** — the user's data: scoring rubric, banned phrases,
+1. **Plugin skills** - shipped, versioned, updated by git pull
+2. **`jobkit.json` / `profile.json`** - the user's data: scoring rubric, banned phrases,
    lane names, feature switches
-3. **Workspace `CLAUDE.md`** — the user's prose overrides ("always mention my Blender work")
+3. **Workspace `CLAUDE.md`** - the user's prose overrides ("always mention my Blender work")
 
 Every skill ends by checking the workspace `CLAUDE.md`; if it contradicts anything above, it
 wins. `git pull` therefore never clobbers the user's rules. Anything the config cannot express
@@ -158,7 +158,7 @@ numbers and **only `rejected` counts as a rejection.** A first-time job seeker r
 number as feedback about himself; it must be true.
 
 **Lanes:** `staged` | `applied` | `not_applied` | `skipped` | `expired`. Every lane the
-filesystem has is a lane the ledger scans — including `expired`.
+filesystem has is a lane the ledger scans - including `expired`.
 
 **Pruning:** an entry whose folder is not found in any lane is marked `missing`, never
 silently retained at its last known status.
@@ -185,24 +185,24 @@ all key on it. No sidecar uses a different key from the ledger.
 
 The loop that runs fifty times. `job-intake` accepts a pasted URL, pasted text, or both.
 
-1. **Extract in tiers, and announce which tier ran** — pasted text → public ATS JSON
+1. **Extract in tiers, and announce which tier ran** - pasted text → public ATS JSON
    (Greenhouse / Lever / Ashby / Workday / ADP) → browser automation if available. The user
    always knows how much to trust the result.
 2. **A JS shell is an EXTRACTION failure, never a freshness verdict.** Report "could not
    read"; never move to `Expired/` on it.
 3. **Pull the employer's whole requisition list, not just the target job.** Sibling reqs
-   routinely state what the target omits — a blank location field next to five populated ones
+   routinely state what the target omits - a blank location field next to five populated ones
    is a decision, not an absence. Costs one extra request.
 4. **Source tiering:** the employer's own ATS is truth. A board listing is a copy that may be
    stale, re-titled, or mis-attributed. When they disagree the ATS wins; when the board is
    silent, ask the ATS before asking the user.
 5. **Score 1–10** against the rubric in `profile.json`. Below threshold (default 6) →
    `Skipped/` **with the reason written down**, never silently dropped.
-6. **Name any intermediary in the same breath as the job** — agency, staffing firm,
+6. **Name any intermediary in the same breath as the job** - agency, staffing firm,
    aggregator, content mill, contest-dressed-as-a-job, rights-grab terms. Never below the fold.
-7. **On a login or captcha wall: stop and say so in plain words** — which site, what it needs,
+7. **On a login or captcha wall: stop and say so in plain words** - which site, what it needs,
    that it will wait. Never return a wall as if it were content.
-8. **Append to `intake_site_recipes.md`** — what worked, what selector or endpoint, what broke,
+8. **Append to `intake_site_recipes.md`** - what worked, what selector or endpoint, what broke,
    dated. Stale recipes get marked stale, not deleted.
 9. **Regenerate the dashboard.**
 
@@ -214,7 +214,7 @@ The loop that runs fifty times. `job-intake` accepts a pasted URL, pasted text, 
 
 - Tailored resume `.txt` **against the baseline only.** Never invents experience.
 - Cover letter **off by default**; generated only when the application requires one.
-- **Envelope check before writing** — length, section count. Refuse and report rather than
+- **Envelope check before writing** - length, section count. Refuse and report rather than
   emit a six-page resume.
 - **Sanitizer** applies the user's banned-phrase and style rules from `profile.json`.
 - **Competence-inflation check.** Framing defaults DOWN: a thin baseline entry becomes
@@ -227,7 +227,7 @@ The loop that runs fifty times. `job-intake` accepts a pasted URL, pasted text, 
 
 ## 8. Update model: the user drives, the plugin records
 
-Claude is passive here by design. The user is the sensor — emails and phone calls reach him,
+Claude is passive here by design. The user is the sensor - emails and phone calls reach him,
 not the tool. `track-application` handles reports in plain language:
 
 | User says | Effect |
@@ -245,7 +245,7 @@ card and links to them.
 **Binding rules:**
 
 - **Never fabricate a date.** A proposed slot is not a confirmed slot. An unknown apply date
-  stays unset and the card sorts to the bottom. *This rule gets a test, not a comment — see
+  stays unset and the card sorts to the bottom. *This rule gets a test, not a comment - see
   §12.*
 - **State the signal tier, no hype.** form/automated email < recruiter or agency contact <
   named human with specifics < hiring-manager conversation < portfolio review or technical
@@ -260,21 +260,21 @@ card and links to them.
 The part that makes this usable by a non-technical person. The source workspace lacks it
 because its owner does this by hand.
 
-### Session start — `session-briefing`
+### Session start - `session-briefing`
 
 Generated from the ledger, no guessing. Runs before the user has to ask for anything.
 
 ```
-Job Dashboard — Tuesday, Aug 4
+Job Dashboard - Tuesday, Aug 4
 
-  ⚠  Interview TOMORROW 9:00am — NBCUniversal, Motion Designer
+  ⚠  Interview TOMORROW 9:00am - NBCUniversal, Motion Designer
       Want to run a mock round, or review your notes?
 
   8 ready to apply · 23 out · 2 interviewing · 4 closed
 
   Anything new since we last talked?
-   · Pixel Forge — applied 34 days ago, no word. Want to close it out?
-   · Riot Games — you said they'd email this week. Hear anything?
+   · Pixel Forge - applied 34 days ago, no word. Want to close it out?
+   · Riot Games - you said they'd email this week. Hear anything?
    · 3 postings are 21+ days old. Check if they're still up?
 
   Or just paste a job link and I'll take it from there.
@@ -282,7 +282,7 @@ Job Dashboard — Tuesday, Aug 4
 
 It **leads the user to the updates he owes** rather than waiting for him to know he owes them.
 
-### Session end — `housekeeping`
+### Session end - `housekeeping`
 
 Offered, not left to the user's initiative:
 
@@ -306,7 +306,7 @@ workspace root.
 - **Inline CSS, inline SVG, vanilla JS. Opens from `file://` by double-click.** No server, no
   build step, no npm, no CDN for anything load-bearing. Fonts degrade to a `system-ui` stack.
 - **All data is baked into the markup at generation time.** A `file://` page cannot `fetch()`
-  a sibling JSON file — CORS blocks it and it fails silently, looking like an empty page. JS
+  a sibling JSON file - CORS blocks it and it fails silently, looking like an empty page. JS
   in the page is only for filtering, search, and expanding cards on data already present.
 - Shows: pipeline counts by lane; upcoming interviews; a staged lane; an active-applications
   lane with days-since-applied; closed, split by reason.
@@ -325,7 +325,7 @@ workspace root.
 
 `make-guide` builds standalone HTML study pages into `guides/`, registered on the dashboard.
 
-- **Plain self-contained HTML is the default** — inline CSS, inline SVG, opens offline.
+- **Plain self-contained HTML is the default** - inline CSS, inline SVG, opens offline.
 - JSX guides remain supported via vendored React + Babel (~400KB in `plugins/jobkit/vendor/`)
   so existing pages still build, but no build step is required for a new guide.
 - **Read tracking ships enabled**, reading the local browser history. It is disclosed in the
@@ -337,7 +337,7 @@ workspace root.
 ## 12. Guards
 
 Rules that live in prose get violated; rules that live in checks do not. **A comment is a
-reminder, not a guard** — the source workspace has a comment promising `applied_date` is never
+reminder, not a guard** - the source workspace has a comment promising `applied_date` is never
 fabricated sitting directly above code that fabricates it on 57 records.
 
 | Guard | Mechanism |
@@ -364,9 +364,9 @@ claimed 57 fabricated dates and an inflated dashboard count; both were artifacts
 without first establishing when each field was introduced. Corrected below.
 
 1. **Ledger keyed on a content hash of an edited file**, with a `*.md` glob fallback returning
-   `matches[0]` in filesystem order — so a folder without an explicit posting file gets keyed
+   `matches[0]` in filesystem order - so a folder without an explicit posting file gets keyed
    on `note.md`, which changes whenever a debrief is added. JobKit keys on folder identity.
-2. **Two identity schemes** — the tracker keys by hash while every sidecar, and `dashboard.py`
+2. **Two identity schemes** - the tracker keys by hash while every sidecar, and `dashboard.py`
    itself, keys by folder name. JobKit uses folder name everywhere.
 3. **Non-atomic ledger writes**, no backup, no schema validation on load. JobKit writes `.tmp`
    then `os.replace()` and validates on load.
@@ -374,7 +374,7 @@ without first establishing when each field was introduced. Corrected below.
    companies. JobKit offers numbered disambiguation.
 5. **`denied` conflated a received rejection with a silence-closure.** JobKit separates
    `status` from `closure_reason`.
-6. **`Expired/` absent from the tracker's directory map** — cosmetic in the source workspace
+6. **`Expired/` absent from the tracker's directory map** - cosmetic in the source workspace
    (its dashboard counts folders directly and already handles Expired), but it left 23 stale
    `pending` entries in the ledger and 35 untracked. JobKit scans every lane the filesystem
    has and marks vanished folders `missing` rather than retaining a stale status.
@@ -387,18 +387,18 @@ without first establishing when each field was introduced. Corrected below.
 
 ## 14. Build order
 
-**Phase 0 — the gate (~10 min).** `git init`, marketplace.json + stub plugin with one trivial
+**Phase 0 - the gate (~10 min).** `git init`, marketplace.json + stub plugin with one trivial
 skill, push, install, confirm it is invocable in Claude Desktop's Code tab. Record the result.
 
-**Session 1 — the core loop.** `jobkit-setup` (onboarding interview → `profile.json`,
+**Session 1 - the core loop.** `jobkit-setup` (onboarding interview → `profile.json`,
 `jobkit.json`, baseline resume, environment check), `job-intake`, `build-application`,
 `dashboard.py`. Done when: empty folder → paste one link → a dashboard card that clicks
 through to the materials, with no manual file editing and no server.
 
-**Session 2 — durability and the human layer.** `ledger.py`, `track-application`,
+**Session 2 - durability and the human layer.** `ledger.py`, `track-application`,
 `session-briefing`, `housekeeping`, `freshness.py`, the sent-immutability hook, `/help`.
 
-**Session 3 — documents and library.** `generate.py` (docx/pdf + envelope enforcement),
+**Session 3 - documents and library.** `generate.py` (docx/pdf + envelope enforcement),
 `make-guide`, reading stats, resume templates.
 
 **Later, explicitly not now:** interview personas, mock rounds, prep-page generation.
@@ -408,10 +408,10 @@ through to the materials, with no manual file editing and no server.
 1. **Build from structure, never copy-and-redact.** Redaction requires proving an absence,
    which is what human review is worst at. Open the original for reference; write the new file
    fresh.
-2. **Nothing personal in this repo.** No real names beyond Benny's first name, no employer
+2. **Nothing personal in this repo.** No real personal names, no employer
    names, no sent materials, no ledger contents.
 3. **Every guard is code, not a note.**
-4. **One runnable check per non-trivial script** — the smallest thing that fails if the logic
+4. **One runnable check per non-trivial script** - the smallest thing that fails if the logic
    breaks.
 5. **Test on a genuinely empty directory every time.** The most likely bug is assuming a file
    that exists only because an earlier run made it.
@@ -423,13 +423,13 @@ through to the materials, with no manual file editing and no server.
 
 | Topic | Was | Now | Why |
 |---|---|---|---|
-| Portfolio piece-selection engine | The non-deferrable core feature | **Cut.** Portfolio lives as links; the tool tailors resumes | User decision: Benny has a hosted portfolio; resume tailoring is the need |
+| Portfolio piece-selection engine | The non-deferrable core feature | **Cut.** Portfolio lives as links; the tool tailors resumes | User decision: the first user has a hosted portfolio; resume tailoring is the need |
 | HTML guide library | Separate product, not v1 | **In scope** | Existing code, wanted |
 | Reading stats via browser history | Dropped permanently | **Ships enabled, disclosed** | User decision; it is the user's own machine and own data |
 | Board scraping / daily feed | Dropped | Dropped | Unchanged |
 | Session briefing + housekeeping | Not present | **Added** | Non-technical user cannot be relied on to initiate maintenance |
 | Workspace folder names | `staging/`, `sent/` | Human-readable lane names | The user sees these in Finder |
 
-**Standing assumption, stated once:** the requirements conversation with Benny still has not
+**Standing assumption, stated once:** the requirements conversation with the first user still has not
 happened. Resume-tailoring is a safe guess for any job seeker, but it is a guess. Phase 4
 stays deliberately empty and gets filled from what breaks in his hands.

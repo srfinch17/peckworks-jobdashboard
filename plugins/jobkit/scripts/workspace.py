@@ -19,19 +19,25 @@ DEFAULT_CONFIG = {
         "skipped": "Skipped",
         "expired": "Expired",
     },
+    # FIX 5: "not_applied", "skipped", "expired" were dropped from here - no
+    # panel or tile ever looked them up, so they were dead config, same
+    # complaint as the "threshold" decoy in profile.example.json. Every key
+    # below is one the dashboard actually renders.
     "vocabulary": {
         "staged": "Ready to apply",
         "applied": "Applied",
-        "not_applied": "Passed on",
-        "skipped": "Skipped",
-        "expired": "Posting closed",
         "in_flight": "Waiting to hear",
         "interviews": "Interviews",
+        "offers": "Offers",
         "rejected": "Not selected",
         "closed_no_response": "No response",
     },
     "score_threshold": 6,
     "stale_after_days": 21,
+    # FIX 5: wired into a chip on waiting cards (dashboard.py's "silent"
+    # field) rather than deleted - matches the owner's stated lesson that a
+    # stale application quietly inflates the in-flight count until someone
+    # actually looks.
     "silence_closure_days": 30,
     "features": {"reading_stats": True},
 }
@@ -132,7 +138,22 @@ def init(root: Path) -> dict:
 
 def scan(root: Path, config: dict) -> dict[str, str]:
     """Return {folder_name: lane} for every job folder on disk."""
+    found, _ = scan_with_warnings(root, config)
+    return found
+
+
+def scan_with_warnings(root: Path, config: dict) -> "tuple[dict[str, str], list[str]]":
+    """Same as scan(), plus a plain-English warning for every collision.
+
+    FIX 4: the same folder name can exist under two lanes at once (a Dropbox
+    restore, or a user copying a folder). The old scan() silently kept
+    whichever lane it visited last and discarded the fact that a collision
+    happened at all. Lanes are still visited in the same fixed order and the
+    last one visited still wins - unchanged behavior - but now a warning
+    names both lanes so the loser is not just silently gone.
+    """
     found: dict[str, str] = {}
+    warnings: list[str] = []
     for lane in LANES:
         directory = lane_dir(root, config, lane)
         if not directory.is_dir():
@@ -142,7 +163,42 @@ def scan(root: Path, config: dict) -> dict[str, str]:
                 continue
             if child.name.startswith((".", "__")):
                 continue
+            if child.name in found:
+                warnings.append(
+                    f"{child.name!r} exists in both the {found[child.name]!r} and {lane!r} "
+                    f"lanes; showing it as {lane!r} - move or rename one copy to fix this."
+                )
             found[child.name] = lane
+    return found, warnings
+
+
+def find_unmapped_job_dirs(root: Path, config: dict, missing_names: set) -> dict:
+    """Top-level workspace folders that are not a configured lane or extra
+    dir, but contain a subfolder matching a ledger entry now marked
+    'missing'.
+
+    FIX 4: this is the fingerprint of a lane renamed in jobkit.json after
+    jobs already existed in its old physical folder - scan() looks for jobs
+    under the NEW name, finds nothing, and every job that used to live there
+    quietly flips to "missing" with no clue why. Returns
+    {directory_name: [matching job folder names]}.
+    """
+    root = Path(root)
+    if not missing_names:
+        return {}
+    known = set(config.get("lanes", {}).values()) | set(EXTRA_DIRS)
+    found = {}
+    if not root.is_dir():
+        return found
+    for child in sorted(root.iterdir()):
+        if not child.is_dir() or child.name in known or child.name.startswith((".", "__")):
+            continue
+        try:
+            matches = sorted(j.name for j in child.iterdir() if j.is_dir() and j.name in missing_names)
+        except OSError:
+            continue
+        if matches:
+            found[child.name] = matches
     return found
 
 

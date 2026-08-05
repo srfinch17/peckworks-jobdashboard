@@ -510,6 +510,108 @@ def test_main_on_a_permission_error_while_saving_the_ledger_gives_a_friendly_mes
 
 # --- FIX 6: a future applied_date must not render as a negative day count ---
 
+# --- FIX 3: offer/phone_screen/missing must each render somewhere, and the
+# in_flight tile must agree with the "Waiting to hear" panel it labels ---
+
+def test_offer_status_gets_its_own_panel_and_tile(tmp_path):
+    import ledger
+    config = workspace.init(tmp_path)
+    (workspace.lane_dir(tmp_path, config, "applied") / "9_Riot_LA_ConceptArtist").mkdir()
+    dashboard.build(tmp_path, "2026-01-10")
+    book = ledger.load(tmp_path / "job_ledger.json")
+    ledger.set_status(book, "9_Riot_LA_ConceptArtist", "offer", "2026-01-20")
+    ledger.save(tmp_path / "job_ledger.json", book)
+    html_doc = dashboard.build(tmp_path, "2026-01-21")
+    offers_section = _section_html(html_doc, "offers")
+    waiting_section = _section_html(html_doc, "active")
+    assert "Riot" in offers_section
+    assert "Riot" not in waiting_section
+    assert 'data-count="offers">1<' in html_doc
+
+
+def test_phone_screen_status_appears_in_interviews_not_waiting(tmp_path):
+    import ledger
+    config = workspace.init(tmp_path)
+    (workspace.lane_dir(tmp_path, config, "applied") / "9_Riot_LA_ConceptArtist").mkdir()
+    dashboard.build(tmp_path, "2026-01-10")
+    book = ledger.load(tmp_path / "job_ledger.json")
+    ledger.set_status(book, "9_Riot_LA_ConceptArtist", "phone_screen", "2026-01-15")
+    ledger.save(tmp_path / "job_ledger.json", book)
+    html_doc = dashboard.build(tmp_path, "2026-01-20")
+    interviews_section = _section_html(html_doc, "interviews")
+    waiting_section = _section_html(html_doc, "active")
+    assert "Riot" in interviews_section
+    assert "Phone screen" in interviews_section
+    assert "Riot" not in waiting_section
+
+
+def test_in_flight_tile_matches_the_waiting_panel_when_an_interview_is_open(tmp_path):
+    """FIX 3 reproduction: the tile used to count every open application
+    (including interview-stage ones) while the "Waiting to hear" panel it
+    labels only ever showed the non-interview subset."""
+    import ledger
+    config = workspace.init(tmp_path)
+    (workspace.lane_dir(tmp_path, config, "applied") / "8_Riot_LA_ConceptArtist").mkdir()
+    (workspace.lane_dir(tmp_path, config, "applied") / "9_Pixar_LA_Modeler").mkdir()
+    dashboard.build(tmp_path, "2026-01-10")
+    book = ledger.load(tmp_path / "job_ledger.json")
+    ledger.set_status(book, "8_Riot_LA_ConceptArtist", "interview_scheduled", "2026-01-15")
+    ledger.save(tmp_path / "job_ledger.json", book)
+    html_doc = dashboard.build(tmp_path, "2026-01-20")
+    waiting_section = _section_html(html_doc, "active")
+    assert waiting_section.count("jcard") == 1  # only Pixar; Riot moved to interviews
+    assert 'data-count="in_flight">1<' in html_doc
+
+
+def test_a_missing_folder_renders_in_the_missing_panel(tmp_path):
+    config = workspace.init(tmp_path)
+    staged = workspace.lane_dir(tmp_path, config, "staged") / "7_Pixar_LA_Modeler"
+    staged.mkdir()
+    dashboard.build(tmp_path, "2026-01-10")
+    import shutil
+    shutil.rmtree(staged)
+    html_doc = dashboard.build(tmp_path, "2026-01-15")
+    missing_section = _section_html(html_doc, "missing")
+    assert "Pixar" in missing_section
+
+
+def test_duplicate_folder_in_two_lanes_produces_a_warning(tmp_path):
+    config = workspace.init(tmp_path)
+    (workspace.lane_dir(tmp_path, config, "staged") / "7_Pixar_LA_Modeler").mkdir()
+    (workspace.lane_dir(tmp_path, config, "applied") / "7_Pixar_LA_Modeler").mkdir()
+    html_doc = dashboard.build(tmp_path, "2026-01-10")
+    assert "warnbox" in html_doc
+    assert "7_Pixar_LA_Modeler" in html_doc
+    assert "both the" in html_doc
+
+
+def test_a_renamed_lane_orphan_produces_a_warning(tmp_path):
+    import json
+    config = workspace.init(tmp_path)
+    (workspace.lane_dir(tmp_path, config, "staged") / "7_Pixar_LA_Modeler").mkdir()
+    dashboard.build(tmp_path, "2026-01-10")
+    cfg_path = tmp_path / "jobkit.json"
+    cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+    cfg["lanes"]["staged"] = "Jobs To Chase"
+    cfg_path.write_text(json.dumps(cfg), encoding="utf-8")
+    workspace.lane_dir(tmp_path, cfg, "staged").mkdir(parents=True, exist_ok=True)
+    html_doc = dashboard.build(tmp_path, "2026-01-15")
+    assert "warnbox" in html_doc
+    assert "lane was renamed" in html_doc
+
+
+def test_a_long_silent_waiting_job_gets_a_silence_chip(tmp_path):
+    config = workspace.init(tmp_path)
+    staged = workspace.lane_dir(tmp_path, config, "staged") / "8_Riot_LA_ConceptArtist"
+    staged.mkdir()
+    dashboard.build(tmp_path, "2026-01-01")
+    staged.rename(workspace.lane_dir(tmp_path, config, "applied") / "8_Riot_LA_ConceptArtist")
+    dashboard.build(tmp_path, "2026-01-01")
+    html_doc = dashboard.build(tmp_path, "2026-02-15")
+    waiting_section = _section_html(html_doc, "active")
+    assert "likely closed silently" in waiting_section
+
+
 def test_a_future_applied_date_does_not_render_as_negative_days(tmp_path):
     import ledger
     config = workspace.init(tmp_path)

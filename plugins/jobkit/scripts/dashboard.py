@@ -8,7 +8,7 @@ value is written into the markup here, at generation time. The JavaScript in the
 page only filters and expands data that is already present.
 
 Usage:
-  python dashboard.py <workspace-path> [--no-open]
+  python3 dashboard.py <workspace-path> [--no-open]
 """
 import html
 import json
@@ -23,6 +23,11 @@ import reading_stats
 import workspace
 
 FOLDER_RE = re.compile(r"^(\d+)_([^_]+)_([^_]+)_(.+)$")
+
+# FIX 3: phone_screen is a real ledger status (see job_status.py) that used
+# to render nowhere - it fell into the "waiting to hear" panel and picked up
+# no distinct chip. It belongs with the other interview stages.
+INTERVIEW_STAGE_STATUSES = ("phone_screen", "interview_scheduled", "interviewed")
 
 
 def parse_folder(name: str) -> dict:
@@ -162,7 +167,7 @@ def build(root, today: str = None) -> str:
     today = today or date.today().isoformat()
     config = workspace.load_config(root)
 
-    on_disk = workspace.scan(root, config)
+    on_disk, scan_warnings = workspace.scan_with_warnings(root, config)
     book = ledger.load(root / "job_ledger.json")
     book, _ = ledger.sync(book, on_disk, today)
 
@@ -201,6 +206,7 @@ def build(root, today: str = None) -> str:
             "status_date": entry.get("status_date", ""),
             "days_waiting": waited,
             "stale": waited is not None and waited >= config.get("stale_after_days", 21),
+            "silent": waited is not None and waited >= config.get("silence_closure_days", 30),
             "posting_url": entry.get("posting_url", ""),
             "folder_uri": _folder_uri(root, config, lane, folder) if lane in config["lanes"] else "",
         }
@@ -220,11 +226,18 @@ def build(root, today: str = None) -> str:
     active_all = [cards[f] for f, e in applied if e.get("status") != "closed"]
     closed = [cards[f] for f, e in applied if e.get("status") == "closed"]
 
-    # An interview is the most important thing on the board, so it gets its
-    # own panel instead of blending into "waiting to hear". Moved, not
-    # duplicated.
-    interviews = [c for c in active_all if c["status"] in ("interview_scheduled", "interviewed")]
-    active = [c for c in active_all if c["status"] not in ("interview_scheduled", "interviewed")]
+    # A folder JobKit can no longer find on disk - deleted, moved by hand, or
+    # orphaned by a lane rename in jobkit.json. It must have somewhere
+    # visible to live: every ribbon number needs a card behind it.
+    missing = [cards[f] for f, e in good_book.items() if f in cards and e.get("lane") == "missing"]
+
+    # An offer or an interview stage is the most important thing on the
+    # board, so each gets its own panel instead of blending into "waiting to
+    # hear". Moved, not duplicated.
+    offers = [c for c in active_all if c["status"] == "offer"]
+    interviews = [c for c in active_all if c["status"] in INTERVIEW_STAGE_STATUSES]
+    active = [c for c in active_all
+              if c["status"] != "offer" and c["status"] not in INTERVIEW_STAGE_STATUSES]
 
     staged.sort(key=lambda c: (-(c["score"] or 0), c["company"]))
     # Newest applied first. An unset applied_date sorts to "" which is
@@ -232,7 +245,23 @@ def build(root, today: str = None) -> str:
     # the bottom - it can never masquerade as today's application.
     active.sort(key=lambda c: c["applied_date"] or "", reverse=True)
     interviews.sort(key=lambda c: c["applied_date"] or "", reverse=True)
+    offers.sort(key=lambda c: c["applied_date"] or "", reverse=True)
     closed.sort(key=lambda c: c["company"])
+    missing.sort(key=lambda c: c["company"])
+
+    # FIX 4: two silent data-loss corners in the scan, surfaced instead of
+    # swallowed. (a) scan_warnings: the same folder name existed under two
+    # lanes at once - scan() picked one, this says which and that the other
+    # is hidden. (b) unmapped: a top-level folder holds job folders that
+    # match a ledger entry now marked "missing" - the fingerprint of a lane
+    # renamed in jobkit.json after jobs already existed in its old folder.
+    unmapped = workspace.find_unmapped_job_dirs(root, config, {c["folder"] for c in missing})
+    warnings = list(scan_warnings)
+    for dirname, matches in unmapped.items():
+        warnings.append(
+            f"'{dirname}' still holds {len(matches)} job folder(s) JobKit cannot place in any "
+            f"lane ({', '.join(matches)}) - check whether a lane was renamed in jobkit.json."
+        )
 
     read_pages = {}
     if config.get("features", {}).get("reading_stats", True):
@@ -242,10 +271,13 @@ def build(root, today: str = None) -> str:
         "today": today,
         "counts": ledger.counts(book),
         "vocabulary": config.get("vocabulary", {}),
+        "warnings": warnings,
         "staged": staged,
         "active": active,
         "interviews": interviews,
+        "offers": offers,
         "closed": closed,
+        "missing": missing,
         "library": scan_guides(root / "guides"),
         "read_pages": read_pages,
     })
@@ -335,7 +367,7 @@ PAGE_CSS = THEME_VARS + """
   .panel::before{content:""; position:absolute; top:0; left:0; right:0; height:3px;
     background:linear-gradient(90deg,var(--pa), color-mix(in srgb,var(--pa) 25%,transparent));}
   .p-ready{--pa:var(--signal);} .p-active{--pa:var(--have);} .p-closed{--pa:var(--muted);} .p-lib{--pa:var(--violet);}
-  .p-interviews{--pa:var(--partial);}
+  .p-interviews{--pa:var(--partial);} .p-offers{--pa:var(--offer);} .p-missing{--pa:var(--muted-2);}
   .phead{display:flex; align-items:center; gap:13px; margin-bottom:4px; flex-wrap:wrap;}
   .phead .picon{flex:none; width:36px; height:36px; display:grid; place-items:center; border-radius:11px;
     color:var(--pa); background:color-mix(in srgb,var(--pa) 15%,transparent);
@@ -381,6 +413,13 @@ PAGE_CSS = THEME_VARS + """
     background:color-mix(in srgb,var(--partial) 12%,transparent);}
   .chip.rejected{color:var(--deny); border-color:color-mix(in srgb,var(--deny) 45%,transparent);
     background:color-mix(in srgb,var(--deny) 10%,transparent);}
+  .chip.offer{color:var(--offer); border-color:color-mix(in srgb,var(--offer) 50%,transparent);
+    background:color-mix(in srgb,var(--offer) 14%,transparent); font-weight:700;}
+  .warnbox{margin-top:16px; border:1px solid color-mix(in srgb,var(--partial) 45%,var(--line));
+    border-radius:12px; background:color-mix(in srgb,var(--partial) 10%,var(--ink-2));
+    padding:10px 16px; font-family:"IBM Plex Mono",monospace; font-size:.76rem; color:var(--text);}
+  .warnbox ul{margin:0; padding-left:18px;}
+  .warnbox li{margin:4px 0;}
   a.chip{transition:color .15s, border-color .15s;}
   a.chip:hover{color:var(--text); border-color:var(--pa);}
   /* library: filter toolbar (search + category chips) */
@@ -462,32 +501,50 @@ def render(context: dict) -> str:
     def label(key: str, fallback: str) -> str:
         return html.escape(vocab.get(key, fallback))
 
+    # FIX 3: every tile below with a same-named panel gets its number FROM
+    # that panel's card list, not from ledger.counts() - counts() answers a
+    # different, historical question (has this job EVER been in that state)
+    # and the two used to silently disagree (tile said 3, panel said 2).
+    # "applied"/"rejected"/"closed_no_response" have no matching panel, so
+    # those three keep the historical count.
     tiles = [
-        ("staged", label("staged", "Ready to apply"), "signal", "layers"),
-        ("applied", label("applied", "Applied"), "adjacent", "send"),
-        ("in_flight", label("in_flight", "Waiting to hear"), "have", "clock"),
-        ("interviews", label("interviews", "Interviews"), "partial", "calendar"),
-        ("rejected", label("rejected", "Not selected"), "deny", "x-circle"),
-        ("closed_no_response", label("closed_no_response", "No response"), "muted-2", "archive"),
+        ("staged", label("staged", "Ready to apply"), "signal", "layers", len(context["staged"])),
+        ("applied", label("applied", "Applied"), "adjacent", "send", counts.get("applied", 0)),
+        ("in_flight", label("in_flight", "Waiting to hear"), "have", "clock", len(context["active"])),
+        ("interviews", label("interviews", "Interviews"), "partial", "calendar", len(context["interviews"])),
+        ("offers", label("offers", "Offers"), "offer", "sparkles", len(context["offers"])),
+        ("rejected", label("rejected", "Not selected"), "deny", "x-circle", counts.get("rejected", 0)),
+        ("closed_no_response", label("closed_no_response", "No response"), "muted-2", "archive",
+         counts.get("closed_no_response", 0)),
     ]
     ribbon = "".join(
         f'<div class="fig" style="--accent:var(--{color})">'
         f'<span class="ficon">{_icon(icon)}</span>'
-        f'<span class="fnum" data-count="{key}">{counts.get(key, 0)}</span>'
+        f'<span class="fnum" data-count="{key}">{count}</span>'
         f'<span class="flab">{text}</span></div>'
-        for key, text, color, icon in tiles
+        for key, text, color, icon, count in tiles
     )
+
+    warnbox = ""
+    if context.get("warnings"):
+        items = "".join(f"<li>{html.escape(w)}</li>" for w in context["warnings"])
+        warnbox = f'<div class="warnbox"><ul>{items}</ul></div>'
 
     ready_label = label("staged", "Ready to apply")
     inflight_label = label("in_flight", "Waiting to hear")
     interviews_label = label("interviews", "Interviews")
+    offers_label = label("offers", "Offers")
 
     sections = "".join([
+        _section(offers_label, context["offers"], "offers", "p-offers", "sparkles",
+                 hide_if_empty=True),
         _section(interviews_label, context["interviews"], "interviews", "p-interviews", "calendar",
                  hide_if_empty=True),
         _section(ready_label, context["staged"], "staged", "p-ready", "layers"),
         _section(inflight_label, context["active"], "active", "p-active", "clock"),
         _section("Closed", context["closed"], "closed", "p-closed", "archive"),
+        _section("Missing folders", context["missing"], "missing", "p-missing", "archive",
+                 hide_if_empty=True),
         _library_section(context["library"], context["read_pages"]),
     ])
 
@@ -502,7 +559,7 @@ def render(context: dict) -> str:
 <div class="topbar"><div class="wrap">
   <span class="brand">Peckworks<span class="dot">&bull;</span>JobKit</span>
   <nav class="navcodes">
-    <a href="#interviews">Interviews</a><a href="#staged">Ready</a><a href="#active">Waiting</a><a href="#closed">Closed</a><a href="#library">Library</a>
+    <a href="#offers">Offers</a><a href="#interviews">Interviews</a><a href="#staged">Ready</a><a href="#active">Waiting</a><a href="#closed">Closed</a><a href="#missing">Missing</a><a href="#library">Library</a>
   </nav>
 </div></div>
 <div class="wrap">
@@ -510,6 +567,7 @@ def render(context: dict) -> str:
     <h1 class="thesis">Peckworks <span class="hl">JobKit</span></h1>
     <div class="stamp">Updated {html.escape(context['today'])}</div>
   </div>
+  {warnbox}
   <div class="ribbon">{ribbon}</div>
   <div class="toolbar">
     <div class="libsearch">{_icon('search')}
@@ -517,7 +575,7 @@ def render(context: dict) -> str:
     </div>
   </div>
   {sections}
-  <footer>Peckworks JobKit, generated locally. No data leaves this file.</footer>
+  <footer>Peckworks JobKit. Nothing about you or your job search is uploaded; it works offline (fonts fall back to system fonts); the only outbound request is for typography.</footer>
 </div>
 <script>
 const q = document.getElementById('q');
@@ -550,7 +608,11 @@ def _section(title: str, cards: list, key: str, panel_class: str, icon: str,
     )
 
 
-_INTERVIEW_LABELS = {"interview_scheduled": "Interview scheduled", "interviewed": "Interviewed"}
+_INTERVIEW_LABELS = {
+    "phone_screen": "Phone screen",
+    "interview_scheduled": "Interview scheduled",
+    "interviewed": "Interviewed",
+}
 
 
 def _applied_chip_text(applied_date: str) -> str:
@@ -576,6 +638,9 @@ def _card(c: dict, section: str) -> str:
         label_text = _INTERVIEW_LABELS.get(c["status"], c["status"])
         date_text = f" {html.escape(c['status_date'])}" if c["status_date"] else ""
         chips.append(f'<span class="chip">{html.escape(label_text)}{date_text}</span>')
+    elif section == "offers":
+        date_text = f" {html.escape(c['status_date'])}" if c["status_date"] else ""
+        chips.append(f'<span class="chip offer">Offer{date_text}</span>')
     elif section == "active":
         chips.append(f'<span class="chip">{_applied_chip_text(c["applied_date"])}</span>')
         if c["days_waiting"] is not None:
@@ -586,10 +651,19 @@ def _card(c: dict, section: str) -> str:
             else:
                 cls = "chip stale" if c["stale"] else "chip"
                 chips.append(f'<span class="{cls}">{c["days_waiting"]} days</span>')
+                # FIX 5: silence_closure_days wired to a visible chip - a
+                # long silence is a stronger signal than plain staleness,
+                # so it shows up in addition to, not instead of, the count.
+                if c["silent"]:
+                    chips.append('<span class="chip stale">no response - likely closed silently</span>')
     elif section == "closed":
         chips.append(f'<span class="chip">{_applied_chip_text(c["applied_date"])}</span>')
         if c["closed_date"]:
             chips.append(f'<span class="chip">closed {html.escape(c["closed_date"])}</span>')
+    elif section == "missing":
+        chips.append('<span class="chip stale">folder not found on disk</span>')
+        if c["status"] != "none":
+            chips.append(f'<span class="chip">last status: {html.escape(c["status"].replace("_", " "))}</span>')
 
     if c["closure_reason"]:
         cls = "chip rejected" if c["closure_reason"] == "rejected" else "chip"
@@ -699,7 +773,7 @@ def _library_section(guides: list, read_pages: dict) -> str:
 def main(argv: list) -> int:
     args = [a for a in argv if not a.startswith("--")]
     if not args:
-        print("Usage: python dashboard.py <workspace-path> [--no-open]")
+        print("Usage: python3 dashboard.py <workspace-path> [--no-open]")
         return 1
     root = Path(args[0]).expanduser().resolve()
 

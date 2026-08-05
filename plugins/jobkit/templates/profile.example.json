@@ -9,13 +9,12 @@
   "target_roles": [],
   "must_haves": [],
   "deal_breakers": [],
-  "banned_phrases": [],
+  "banned_phrases": ["—"],
   "envelope": {
     "max_words": 700,
     "max_sections": 8
   },
   "scoring": {
-    "threshold": 6,
     "rubric": []
   }
 }

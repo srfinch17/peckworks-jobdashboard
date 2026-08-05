@@ -15,21 +15,21 @@ Everything downstream assumes a user-installed plugin is visible to Claude Deskt
       `/plugin install jobkit`. Confirm the skill is invocable.
 - [ ] If a Mac is reachable, confirm the same in Claude Desktop's Code tab.
 
-**If the Code tab does not see it:** fall back to Claude Code CLI for Benny. Note the result here
+**If the Code tab does not see it:** fall back to Claude Code CLI for the first user. Note the result here
 and move on. The plugin artifact does not change.
 
 ---
 
 ## v0: the evening slice
 
-Goal: Benny points Claude at a folder, answers questions, pastes one job link, and gets a real
+Goal: the first user points Claude at a folder, answers questions, pastes one job link, and gets a real
 folder with real materials and a dashboard that shows it. Text files only.
 
 ### v0.1 Scaffold
 - [x] `marketplace.json`, `plugin.json`, directory skeleton
 - [x] `templates/workspace/` with the directory structure and starter `site_recipes.md`
       (built by `workspace.init`, not a static template dir: lane folders, `guides/`,
-      `Baseline/`, starter `CLAUDE.md`, starter `intake_site_recipes.md` — same result)
+      `Baseline/`, starter `CLAUDE.md`, starter `intake_site_recipes.md` - same result)
 
 ### v0.2 `jobkit-setup` skill
 The onboarding interview. This is the most important skill in the product because it produces the
@@ -88,7 +88,7 @@ The visible payoff of the whole product. Treat it as a feature, not a report. Se
       anything load-bearing. Fonts degrade to `system-ui`.
 - [x] Pipeline counts, staging lane, sent lane, per-job cards
 - [x] Every card links to its job folder via `file://` so one click opens the materials
-- [x] Dark theme that actually looks good. This is the thing Benny will show people.
+- [x] Dark theme that actually looks good. This is the thing the first user will show people.
 - [x] `webbrowser.open()` it on completion AND print the path for bookmarking
 - [x] Vocabulary comes from `jobkit.json` so it reads correctly for a non-engineer
 - [x] Reserve a layout slot for a future library section so adding it is not a redesign
@@ -102,7 +102,7 @@ job, no manual file editing, and the page opens by double-click with no server r
 Confirmed end-to-end on code paths (`tests/test_end_to_end.py`, all against directories that did
 not exist when the test started) and via a real command-line invocation of `dashboard.py` and
 `check_document.py` from a system temp directory (Task 10, Session 1). **Not yet confirmed:** the
-live Claude Desktop walkthrough (brief step 4) — that requires a human driving Claude and is not
+live Claude Desktop walkthrough (brief step 4) - that requires a human driving Claude and is not
 done by this task.
 
 **Genuine bug found, not fixed (see `task-10-report.md`):** `dashboard.py`, run as a CLI script
@@ -146,7 +146,7 @@ error message.
 - [ ] `jobkit-doctor`: diagnose a broken workspace (missing deps, malformed ledger, orphaned folders)
 - [ ] Signal-tier calibration in the tracker's own language (see `LESSONS_HARVEST.md` item 5)
 
-## Phase 4: only after Benny has used it
+## Phase 4: only after the first user has used it
 
 Deliberately empty. The requirements conversation has not happened, so anything specified here
 would be a guess. Fill it from what actually breaks in his hands.
@@ -158,7 +158,7 @@ would be a guess. Fill it from what actually breaks in his hands.
 1. **Build from structure, never copy-and-redact.** Do not paste a source-workspace file in and
    strip the personal parts. That is how a name, a company, or a file path leaks into a public
    repo. Open the original for reference, write the new one fresh.
-2. **Nothing personal in this repo.** No real names beyond Benny's first name, no employer names,
+2. **Nothing personal in this repo.** No real personal names, no employer names,
    no sent materials, no ledger contents, no interview notes.
 3. **Every guard is code, not a note.** The source workspace learned repeatedly that a rule living
    in prose gets violated and a rule living in a check does not.

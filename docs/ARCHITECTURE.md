@@ -25,7 +25,7 @@ tab. Same artifact, both surfaces, no MCP server to write, no bundle to sign.
 ⚠️ **Verify before building on it:** confirm on a Mac that the Code tab picks up a
 user-installed marketplace plugin. The docs describe org-managed deployment in detail and the
 user-install path more briefly. This is a 10 minute check and it gates everything, so do it first.
-Fallback if it does not: Benny installs Claude Code CLI (one `npm` command) and runs it there.
+Fallback if it does not: the first user installs Claude Code CLI (one `npm` command) and runs it there.
 The plugin is unchanged either way.
 
 ## 2. Repo layout
@@ -50,7 +50,7 @@ peckworks-jobdashboard/
 └── docs/
 ```
 
-Install path for Benny:
+Install path for the first user:
 ```
 /plugin marketplace add <owner>/peckworks-jobdashboard
 /plugin install jobkit
@@ -61,7 +61,7 @@ Then: "set up my job search in ~/JobSearch".
 
 **The plugin** lives wherever Claude installs it. Read-only, versioned, updated by git.
 
-**The workspace** is a directory Benny picks (say `~/JobSearch`). The plugin creates and owns the
+**The workspace** is a directory the first user picks (say `~/JobSearch`). The plugin creates and owns the
 structure inside it:
 
 ```
@@ -194,7 +194,7 @@ folders is worse than no dashboard, because it gets trusted.
   hardcodes one person's rules (an em-dash ban, specific forbidden words). Here they are a list
   the user owns.
 
-**macOS note:** Benny's machine needs Python 3 and two pip packages. The setup skill should check
+**macOS note:** the first user's machine needs Python 3 and two pip packages. The setup skill should check
 for Python and print the exact install line rather than assuming. macOS ships Python 3, so this is
 usually a one-line pip install.
 

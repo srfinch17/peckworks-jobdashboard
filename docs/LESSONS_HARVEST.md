@@ -216,7 +216,7 @@ the simulation as a prediction of the QUESTIONS.
 
 | Rule / feature | Why it does not ship |
 |---|---|
-| Browser-history mining for reading stats | Reads someone's browsing history. Fine on your own machine; not something you ship to another person. |
+| Browser-history mining for reading stats | Reads someone's browsing history. Fine on your own machine; not something you ship to another person. **Reversed 2026-08-04** at the owner's request: ships ON by default, narrowed to only `file://` visits under the workspace, everything else discarded unread, nothing uploaded, the temp copy deleted after each harvest, disclosed in the README and during setup, switchable off via `features.reading_stats`. |
 | Automated board feed (LinkedIn guest endpoints, Dice API) | Terms-of-service exposure transfers to the user, and it breaks silently. Paste-first instead. |
 | Company registry of a specific geography | Entirely personal data. |
 | Study-guide library and its HTML generator | A genuinely good idea and a separate product. The dashboard reserves a slot. |

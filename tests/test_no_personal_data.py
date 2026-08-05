@@ -84,6 +84,20 @@ def test_tracked_files_in_any_dir_name_are_still_scanned(tmp_path):
     ), "a tracked file under docs/superpowers/ must still be scanned, not silently skipped"
 
 
+# --- FIX 9: the README's install command deliberately names the real,
+# already-public GitHub owner/repo, which can collide with identity
+# fragments in forbidden_strings.local.txt (e.g. "Finch" inside
+# "srfinch17"). That one line is allowlisted; every other line is not. ---
+
+def test_forbidden_line_allowlist_permits_only_its_own_line(tmp_path):
+    lines = ["filler line\n"] * 11
+    lines[10] = "   /plugin marketplace add srfinch17/peckworks-jobdashboard\n"  # line 11
+    lines.append("Finch shows up again here, unrelated to the install line\n")  # line 12
+    (tmp_path / "README.md").write_text("".join(lines), encoding="utf-8")
+    hits = npd.scan(tmp_path, ["Finch"])
+    assert hits == [(Path("README.md"), 12, "forbidden string", "Finch")]
+
+
 def test_missing_local_list_fails_closed():
     """A fork without the local list must FAIL, never silently pass."""
     import os

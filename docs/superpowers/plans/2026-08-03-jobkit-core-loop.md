@@ -6,7 +6,7 @@
 
 **Architecture:** One plugin directory containing skills (markdown procedures loaded on demand) plus four small Python modules. The plugin is read-only and updated by `git pull`; the user's workspace holds all data and all customization. The ledger is keyed on folder name. The dashboard is a single HTML file with every value baked into the markup at generation time, because a `file://` page cannot `fetch()` a sibling JSON file.
 
-**Tech Stack:** Python 3.11+ (standard library only for this plan — no pip installs), Markdown skills, vanilla HTML/CSS/JS. pytest for tests (dev-only, never a runtime requirement).
+**Tech Stack:** Python 3.11+ (standard library only for this plan - no pip installs), Markdown skills, vanilla HTML/CSS/JS. pytest for tests (dev-only, never a runtime requirement).
 
 **Source spec:** `docs/superpowers/specs/2026-08-02-jobkit-design.md`
 
@@ -15,11 +15,11 @@
 - **Python 3.11 or newer.** Standard library only in this plan. `python-docx` and `reportlab` arrive in the Session 3 plan, not here.
 - **Nothing is ever written outside the workspace root.** Every script takes the workspace path as an explicit argument. Never infer it from the current working directory.
 - **The ledger is keyed on folder name.** Never on a content hash of a file that gets edited.
-- **`applied_date` is set only from an observed real signal** — a folder moving into the applied lane. Never backfilled from a later status event, never defaulted to today, never guessed. If unknown it stays unset.
+- **`applied_date` is set only from an observed real signal** - a folder moving into the applied lane. Never backfilled from a later status event, never defaulted to today, never guessed. If unknown it stays unset.
 - **`status` and `closure_reason` are separate fields.** Only `closure_reason == "rejected"` counts as a rejection anywhere.
 - **The dashboard is one self-contained HTML file.** Inline CSS, inline SVG, vanilla JS. No server, no build step, no npm, no CDN for anything load-bearing. All data baked in at generation time. **The string `fetch(` must never appear in generated output.**
 - **All user-supplied text is HTML-escaped** before it reaches the page.
-- **No personal data in this repo.** No real names beyond "Benny", no employer names, no home directory paths, no real email addresses. `tools/no_personal_data.py` must pass before any push.
+- **No personal data in this repo.** No real names beyond "the first user", no employer names, no home directory paths, no real email addresses. `tools/no_personal_data.py` must pass before any push.
 - **The tool never makes the art.** No image generation, no touching portfolio files, no writing anything that claims to be the user's creative work.
 - **Every state-changing skill regenerates the dashboard** at the end of its turn.
 - **Every skill checks the workspace `CLAUDE.md` last**; if it contradicts plugin instructions, the workspace file wins.
@@ -34,7 +34,7 @@
 |---|---|
 | `tools/no_personal_data.py` | Pre-commit guard. Scans repo for personal data, exits nonzero on a hit. |
 | `.claude-plugin/marketplace.json` | Makes this repo installable as a plugin marketplace. |
-| `plugins/jobkit/.claude-plugin/plugin.json` | Plugin manifest — name, version, description. |
+| `plugins/jobkit/.claude-plugin/plugin.json` | Plugin manifest - name, version, description. |
 | `plugins/jobkit/scripts/workspace.py` | Workspace creation, config load, lane→folder mapping, path containment. |
 | `plugins/jobkit/scripts/ledger.py` | Ledger load/save/sync/status. Folder-keyed, atomic writes. |
 | `plugins/jobkit/scripts/checks.py` | Envelope check, banned-phrase check, competence-inflation check. |
@@ -155,7 +155,7 @@ def test_missing_local_list_fails_closed():
 - [ ] **Step 4: Run the test to verify it fails**
 
 Run: `python -m pytest tests/test_no_personal_data.py -v`
-Expected: FAIL — `ModuleNotFoundError: No module named 'no_personal_data'`
+Expected: FAIL - `ModuleNotFoundError: No module named 'no_personal_data'`
 
 - [ ] **Step 5: Write the guard**
 
@@ -272,7 +272,7 @@ Create `tools/forbidden_strings.local.txt`. One string per line. At minimum: you
 # This file is gitignored. It is personal data.
 ```
 
-Fill it in with real values. Do not commit it — `.gitignore` already covers it.
+Fill it in with real values. Do not commit it - `.gitignore` already covers it.
 
 - [ ] **Step 8: Wire the pre-commit hook**
 
@@ -308,7 +308,7 @@ git commit -m "feat: add personal-data guard that fails closed"
 
 ---
 
-### Task 2: The Phase 0 gate — plugin scaffold, push, install
+### Task 2: The Phase 0 gate - plugin scaffold, push, install
 
 The only task that can invalidate the architecture. Ten minutes. Do it before writing anything else.
 
@@ -373,27 +373,27 @@ description: Use when the user asks what JobKit can do, how to use it, what to s
 Answer in plain English. This user may not be technical. Describe things to
 **say**, not commands to run.
 
-If no workspace exists yet, lead with setup and stop there — do not list the
+If no workspace exists yet, lead with setup and stop there - do not list the
 rest, it will not work yet.
 
 ## Getting started
 
-- **"Set up my job search in ~/JobDashboard"** — creates the workspace and walks
+- **"Set up my job search in ~/JobDashboard"** - creates the workspace and walks
   through a short interview. Do this first.
 
 ## Every day
 
-- **Paste a job link** — JobKit reads the posting, scores the fit, and files it.
-- **"Build the application for the Pixar one"** — tailors a resume from the baseline.
-- **"I applied to the Pixar one"** — moves it to the applied lane.
-- **"Here's a rejection email"** *(paste it)* — records it and files the email.
-- **"They want to schedule an interview"** — creates an interview card.
-- **"Open my dashboard"** — regenerates and opens the HTML dashboard.
+- **Paste a job link** - JobKit reads the posting, scores the fit, and files it.
+- **"Build the application for the Pixar one"** - tailors a resume from the baseline.
+- **"I applied to the Pixar one"** - moves it to the applied lane.
+- **"Here's a rejection email"** *(paste it)* - records it and files the email.
+- **"They want to schedule an interview"** - creates an interview card.
+- **"Open my dashboard"** - regenerates and opens the HTML dashboard.
 
 ## Anytime
 
-- **"Make me a guide about colour theory"** — builds a study page in your library.
-- **"What's going on with my search?"** — a briefing of where everything stands.
+- **"Make me a guide about colour theory"** - builds a study page in your library.
+- **"What's going on with my search?"** - a briefing of where everything stands.
 
 ## Ground rules worth stating if asked
 
@@ -463,14 +463,14 @@ If the repo already exists on GitHub: `git remote add origin <url> && git push -
 Then type `/jobkit-help`.
 Expected: the help text from Step 3 appears.
 
-- [ ] **Step 9: Install the plugin in Claude Desktop's Code tab — THE GATE**
+- [ ] **Step 9: Install the plugin in Claude Desktop's Code tab - THE GATE**
 
 Repeat Step 8 inside Claude Desktop's Code tab. Type `/jobkit-help`.
 
 **Record the result in `docs/BUILD_PLAN.md` under Phase 0 either way.**
 
 - **If it works:** continue to Task 3 unchanged.
-- **If it does not:** the plugin artifact is unchanged. Benny installs Claude Code CLI with `npm install -g @anthropic-ai/claude-code` and runs it there. Note this in the README install instructions and continue to Task 3 unchanged.
+- **If it does not:** the plugin artifact is unchanged. The first user installs Claude Code CLI with `npm install -g @anthropic-ai/claude-code` and runs it there. Note this in the README install instructions and continue to Task 3 unchanged.
 
 - [ ] **Step 10: Commit the gate result**
 
@@ -481,7 +481,7 @@ git commit -m "docs: record Phase 0 install gate result"
 
 ---
 
-### Task 3: Workspace module — creation, config, path containment
+### Task 3: Workspace module - creation, config, path containment
 
 **Files:**
 - Create: `plugins/jobkit/scripts/workspace.py`
@@ -493,11 +493,11 @@ git commit -m "docs: record Phase 0 install gate result"
 - Produces:
   - `LANES: tuple[str, ...]` = `("staged", "applied", "not_applied", "skipped", "expired")`
   - `DEFAULT_CONFIG: dict`
-  - `init(root: Path) -> dict` — creates directories and `jobkit.json`, returns the config
+  - `init(root: Path) -> dict` - creates directories and `jobkit.json`, returns the config
   - `load_config(root: Path) -> dict`
   - `lane_dir(root: Path, config: dict, lane: str) -> Path`
-  - `scan(root: Path, config: dict) -> dict[str, str]` — `{folder_name: lane}`
-  - `safe_join(root: Path, *parts: str) -> Path` — raises `ValueError` if the result escapes `root`
+  - `scan(root: Path, config: dict) -> dict[str, str]` - `{folder_name: lane}`
+  - `safe_join(root: Path, *parts: str) -> Path` - raises `ValueError` if the result escapes `root`
 
 - [ ] **Step 1: Create the pytest path shim**
 
@@ -605,7 +605,7 @@ def test_lane_dir_rejects_an_unknown_lane(tmp_path):
 - [ ] **Step 3: Run the test to verify it fails**
 
 Run: `python -m pytest tests/test_workspace.py -v`
-Expected: FAIL — `ModuleNotFoundError: No module named 'workspace'`
+Expected: FAIL - `ModuleNotFoundError: No module named 'workspace'`
 
 - [ ] **Step 4: Write the module**
 
@@ -796,7 +796,7 @@ git commit -m "feat: add workspace module with path-containment guard"
 
 ---
 
-### Task 4: Ledger module — folder-keyed, atomic, honest dates
+### Task 4: Ledger module - folder-keyed, atomic, honest dates
 
 This task carries the regression guards for the two flaws found in the source workspace.
 
@@ -810,8 +810,8 @@ This task carries the regression guards for the two flaws found in the source wo
   - `STATUSES: tuple[str, ...]` = `("none", "awaiting", "phone_screen", "interview_scheduled", "interviewed", "offer", "closed")`
   - `CLOSURE_REASONS: tuple[str, ...]` = `("rejected", "closed_no_response", "withdrawn")`
   - `load(path: Path) -> dict`
-  - `save(path: Path, ledger: dict) -> None` — atomic
-  - `sync(ledger: dict, on_disk: dict[str, str], today: str) -> tuple[dict, list[tuple[str, str, str]]]` — events are `(kind, folder, lane)` where kind is `"new" | "moved" | "missing"`
+  - `save(path: Path, ledger: dict) -> None` - atomic
+  - `sync(ledger: dict, on_disk: dict[str, str], today: str) -> tuple[dict, list[tuple[str, str, str]]]` - events are `(kind, folder, lane)` where kind is `"new" | "moved" | "missing"`
   - `set_status(ledger: dict, folder: str, status: str, today: str, closure_reason: str | None = None) -> dict`
   - `resolve(ledger: dict, fragment: str) -> list[str]`
   - `counts(ledger: dict) -> dict[str, int]`
@@ -983,7 +983,7 @@ def test_days_since():
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `python -m pytest tests/test_ledger.py -v`
-Expected: FAIL — `ModuleNotFoundError: No module named 'ledger'`
+Expected: FAIL - `ModuleNotFoundError: No module named 'ledger'`
 
 - [ ] **Step 3: Write the module**
 
@@ -1179,7 +1179,7 @@ git commit -m "feat: add folder-keyed ledger with applied_date and closure-reaso
 
 ---
 
-### Task 5: Checks module — envelope, banned phrases, competence inflation
+### Task 5: Checks module - envelope, banned phrases, competence inflation
 
 **Files:**
 - Create: `plugins/jobkit/scripts/checks.py`
@@ -1192,7 +1192,7 @@ git commit -m "feat: add folder-keyed ledger with applied_date and closure-reaso
   - `envelope(text: str, max_words: int, max_sections: int) -> list[str]`
   - `banned_phrases(text: str, banned: list[str]) -> list[str]`
   - `inflation(text: str) -> list[str]`
-  - `run_all(text: str, profile: dict) -> list[str]` — every problem found, empty list means clean
+  - `run_all(text: str, profile: dict) -> list[str]` - every problem found, empty list means clean
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1289,7 +1289,7 @@ def test_run_all_uses_defaults_when_profile_is_bare():
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `python -m pytest tests/test_checks.py -v`
-Expected: FAIL — `ModuleNotFoundError: No module named 'checks'`
+Expected: FAIL - `ModuleNotFoundError: No module named 'checks'`
 
 - [ ] **Step 3: Write the module**
 
@@ -1382,9 +1382,9 @@ git commit -m "feat: add envelope, banned-phrase and inflation checks"
 **Interfaces:**
 - Consumes: `workspace.load_config`, `workspace.scan`, `workspace.lane_dir`, `ledger.load`, `ledger.sync`, `ledger.save`, `ledger.counts`, `ledger.days_since`
 - Produces:
-  - `build(root: Path, today: str) -> str` — syncs the ledger, returns the HTML
-  - `render(context: dict) -> str` — pure; context has keys `today`, `counts`, `vocabulary`, `staged`, `active`, `closed`, `root_uri`
-  - `main(argv: list[str]) -> int` — CLI entry point, writes `CareerDashboard.html` and opens it
+  - `build(root: Path, today: str) -> str` - syncs the ledger, returns the HTML
+  - `render(context: dict) -> str` - pure; context has keys `today`, `counts`, `vocabulary`, `staged`, `active`, `closed`, `root_uri`
+  - `main(argv: list[str]) -> int` - CLI entry point, writes `CareerDashboard.html` and opens it
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1502,7 +1502,7 @@ def test_empty_workspace_renders_without_crashing(tmp_path):
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `python -m pytest tests/test_dashboard.py -v`
-Expected: FAIL — `ModuleNotFoundError: No module named 'dashboard'`
+Expected: FAIL - `ModuleNotFoundError: No module named 'dashboard'`
 
 - [ ] **Step 3: Write the module**
 
@@ -1781,7 +1781,7 @@ mkdir -p "/tmp/jk/Jobs I Have Applied To/7_Riot_LosAngeles_ConceptArtist"
 python plugins/jobkit/scripts/dashboard.py /tmp/jk
 ```
 
-Expected: the page opens in a browser and looks deliberate. If it looks like an unstyled document, the CSS did not survive — fix before continuing. This is the artifact Benny shows people.
+Expected: the page opens in a browser and looks deliberate. If it looks like an unstyled document, the CSS did not survive - fix before continuing. This is the artifact the first user shows people.
 
 - [ ] **Step 6: Commit**
 
@@ -1859,7 +1859,7 @@ Assume the user is not technical. No jargon. One question at a time.
 - **You are not judging them.** No feedback on their answers, no encouragement,
   no "great!". A colleague taking notes.
 
-## Step 1 — the workspace path
+## Step 1 - the workspace path
 
 Ask where they want it. Suggest `~/JobDashboard`. Confirm the full path back to
 them before creating anything.
@@ -1876,7 +1876,7 @@ and a place for their resume.
 
 **Store the path.** Every later command needs it. Nothing is ever written outside it.
 
-## Step 2 — the environment check
+## Step 2 - the environment check
 
 Check and REPORT. Never hard-fail; a tool that refuses to start gets uninstalled.
 
@@ -1885,13 +1885,13 @@ python3 --version
 ```
 
 Report what is present and what is missing, with the exact command to fix each.
-`python-docx` and `reportlab` are only needed for Word and PDF output — say that
+`python-docx` and `reportlab` are only needed for Word and PDF output - say that
 plainly and say text files work without them.
 
 Check whether a browser automation tool is available. If not, say what still works
 without it: pasted text and structured job-board data, which is most of the value.
 
-## Step 3 — the interview
+## Step 3 - the interview
 
 Write answers into `profile.json` in the workspace, using
 `${CLAUDE_PLUGIN_ROOT}/templates/profile.example.json` as the shape. Save after
@@ -1899,7 +1899,7 @@ each answer.
 
 Ask in this order, one at a time:
 
-1. Name, email, phone. (Email and phone go on the resume — confirm they want them there.)
+1. Name, email, phone. (Email and phone go on the resume - confirm they want them there.)
 2. Where they live, and whether they will relocate. Ask about remote separately.
 3. What kind of work they want. Let them answer in their own words, then read
    back the job titles you would search for and let them correct you.
@@ -1907,10 +1907,10 @@ Ask in this order, one at a time:
    the files themselves.**
 5. What has to be true for a job to be worth applying to. Then what makes one an
    instant no. These become the scoring rubric.
-6. Anything they never want written on their behalf — words, phrases, claims.
+6. Anything they never want written on their behalf - words, phrases, claims.
    These become `banned_phrases`.
 
-## Step 4 — the baseline
+## Step 4 - the baseline
 
 `Baseline/` is the source of truth. **Every claim in every generated document must
 trace back to something in here.** Nothing else is ever invented.
@@ -1928,17 +1928,17 @@ backgrounds, the baseline says backgrounds. No document JobKit ever writes may
 imply they did the whole piece. Ask about it explicitly for every collaborative
 project, and write the answer down verbatim.
 
-## Step 5 — first dashboard
+## Step 5 - first dashboard
 
 ```bash
 python "${CLAUDE_PLUGIN_ROOT}/scripts/dashboard.py" "<workspace-path>"
 ```
 
 It will open in their browser. Tell them to bookmark it, and tell them it is a
-plain file on their computer — no internet, no login, no server. It updates itself
+plain file on their computer - no internet, no login, no server. It updates itself
 every time they add or change a job.
 
-## Step 6 — tell them what to do next
+## Step 6 - tell them what to do next
 
 Exactly one instruction: **paste a job link.** Nothing else. They will discover
 the rest by asking, and `/jobkit-help` lists it.
@@ -2009,13 +2009,13 @@ If there is no `jobkit.json` in the workspace, run `jobkit-setup` first.
 
 ## 1. Get the posting
 
-Three tiers. Try in order. **Say out loud which one you used** — the user needs to
+Three tiers. Try in order. **Say out loud which one you used** - the user needs to
 know how much to trust the result.
 
-**Tier 1 — pasted text.** Always works, zero dependencies. If they pasted the body,
+**Tier 1 - pasted text.** Always works, zero dependencies. If they pasted the body,
 use it and skip to step 2.
 
-**Tier 2 — public ATS JSON.** Check `intake_site_recipes.md` first. The documented
+**Tier 2 - public ATS JSON.** Check `intake_site_recipes.md` first. The documented
 endpoints are in there for Greenhouse, Lever, Ashby, Workday and ADP.
 
 🔑 **Pull the employer's WHOLE requisition list, not just the target job.** Most of
@@ -2028,7 +2028,7 @@ field sitting next to five populated ones is a decision. Costs one extra request
 JSON API returns every open req. Report "could not read the page," and never let
 this move a job to the expired lane.
 
-**Tier 3 — browser.** Only if a browser automation tool is available. Follow the
+**Tier 3 - browser.** Only if a browser automation tool is available. Follow the
 recipe for that site if one exists.
 
 **Source tiering when sources disagree:** the employer's own ATS is truth. A board
@@ -2042,7 +2042,7 @@ the whole record.
 
 ## 2. Flag an intermediary IN THE SAME BREATH
 
-If the poster is not the employer, say so immediately — never below the fold, never
+If the poster is not the employer, say so immediately - never below the fold, never
 after the good news. An agency, staffing firm, aggregator or reposter distorts
 everything: salary in both directions, mis-attributed employer, dead reqs left up,
 unnamed end client.
@@ -2054,7 +2054,7 @@ and rights-grab terms in the posting. Say which one you think it is and why.
 ## 3. Score it
 
 Score 1–10 against the rubric in `profile.json`. Show your reasoning in one or two
-lines — not a table, not an essay.
+lines - not a table, not an essay.
 
 - **At or above the threshold** (default 6): build the folder, step 4.
 - **Below it:** create `Skipped/0_<Company>_<Role>_SKIPPED/skipped.md` recording the
@@ -2068,19 +2068,19 @@ punctuation beyond the underscores. Location is a city or `Remote`.
 
 Two files:
 
-**`original_job_posting.md`** — the source URL on **line 1, by itself**, then the
+**`original_job_posting.md`** - the source URL on **line 1, by itself**, then the
 verbatim posting body. Line 1 is what every downstream link depends on. If there is
 genuinely no URL, line 1 reads `Applied via <source> - URL not captured` and you say
 so out loud.
 
-**`note.md`** — your read: fit, gaps against the baseline, what to lead with, and
+**`note.md`** - your read: fit, gaps against the baseline, what to lead with, and
 anything the posting leaves unclear.
 
 ## 5. Record what you learned
 
 Append to `intake_site_recipes.md`: the site, what worked, the endpoint or selector,
 any wall you hit, and today's date. If a recipe was already there and failed, **mark
-it stale with the date and what broke** — do not delete it — then record what you
+it stale with the date and what broke** - do not delete it - then record what you
 fell back to.
 
 ## 6. Refresh the dashboard
@@ -2095,7 +2095,7 @@ it gets trusted.
 ## 7. Report
 
 Short. Tier used, score with a one-line reason, intermediary if any, folder created.
-No enthusiasm — a posting is not a callback.
+No enthusiasm - a posting is not a callback.
 
 ## Last
 
@@ -2232,8 +2232,8 @@ description: Use when the user asks to build, write, tailor, draft, or prepare a
 
 ## Read first, in this order
 
-1. `profile.json` — who they are, their rules, their banned phrases
-2. `Baseline/` — **the only source of truth for any claim**
+1. `profile.json` - who they are, their rules, their banned phrases
+2. `Baseline/` - **the only source of truth for any claim**
 3. The job folder's `original_job_posting.md` and `note.md`
 4. The workspace `CLAUDE.md`
 
@@ -2241,7 +2241,7 @@ description: Use when the user asks to build, write, tailor, draft, or prepare a
 
 **Every claim traces to the baseline.** No invented metrics, no invented tools, no
 rounding a number up because it reads better, no skill they did not list. If the
-posting wants something the baseline does not have, the resume does not claim it —
+posting wants something the baseline does not have, the resume does not claim it -
 you say so to the user instead, as a gap.
 
 A fabricated line survives right up until someone asks about it in a room.
@@ -2269,7 +2269,7 @@ gets through.
 ⚠️ **For creative work this binds hardest to role attribution.** If the baseline says
 they did backgrounds, no sentence may imply they did the whole piece. If it says they
 were one of six, no sentence may read as though they led it. When the baseline is
-vague about what part was theirs, **ask them** — do not choose the flattering reading.
+vague about what part was theirs, **ask them** - do not choose the flattering reading.
 
 ## Cover letter
 
@@ -2427,11 +2427,11 @@ Expected: PASS, 2 passed
 Run: `python -m pytest tests/ -v`
 Expected: all green. Fix anything red before continuing.
 
-- [ ] **Step 4: Do the manual walkthrough as Benny**
+- [ ] **Step 4: Do the manual walkthrough as the first user**
 
 In Claude Desktop's Code tab, with the plugin installed, and pointing at a folder that does not exist yet:
 
-1. "Set up my job search in ~/BennyTest"
+1. "Set up my job search in ~/JobSearchTest"
 2. Answer the interview as a graphics artist would
 3. Paste a real posting URL for an art or design role
 4. "Build the application for that one"
@@ -2466,16 +2466,16 @@ git push
 
 Deliberately deferred to the Session 2 plan (durability and the human layer):
 
-- `track-application` — status updates from pasted emails, interview cards
-- `session-briefing` — the start-of-session "here's where you stand" summary
-- `housekeeping` — the end-of-session tidy-up prompt
-- `freshness.py` — checking whether postings are still live, with a control test
+- `track-application` - status updates from pasted emails, interview cards
+- `session-briefing` - the start-of-session "here's where you stand" summary
+- `housekeeping` - the end-of-session tidy-up prompt
+- `freshness.py` - checking whether postings are still live, with a control test
 - The sent-immutability hook
 
 And to the Session 3 plan (documents and library):
 
-- `generate.py` — docx and pdf output
-- `make-guide` — the HTML study library
+- `generate.py` - docx and pdf output
+- `make-guide` - the HTML study library
 - Reading stats
 
 Until Session 2 ships, a user can take in jobs, build applications, and move folders by hand; the dashboard picks up the moves on the next run. That is a real, usable slice.

@@ -8,35 +8,35 @@ description: Use when the user asks what JobKit can do, how to use it, what to s
 Answer in plain English. This user may not be technical. Describe things to
 **say**, not commands to run.
 
-If no workspace exists yet, lead with setup and stop there — do not list the
+If no workspace exists yet, lead with setup and stop there - do not list the
 rest, it will not work yet.
 
 ## Getting started
 
-- **"Set up my job search in ~/JobDashboard"** — creates the workspace and walks
+- **"Set up my job search in ~/JobDashboard"** - creates the workspace and walks
   through a short interview. Do this first.
 
 ## Every day
 
-- **Paste a job link** — JobKit reads the posting, scores the fit, and files it.
-- **"Build the application for the Pixar one"** — tailors a resume from the baseline.
-- **"I applied to the Pixar one"** — moves it to the applied lane; the apply date is
+- **Paste a job link** - JobKit reads the posting, scores the fit, and files it.
+- **"Build the application for the Pixar one"** - tailors a resume from the baseline.
+- **"I applied to the Pixar one"** - moves it to the applied lane; the apply date is
   set from that move, never typed in.
-- **"Here's a rejection email"** *(paste it)* — records it and files the email. A
+- **"Here's a rejection email"** *(paste it)* - records it and files the email. A
   closure by silence ("no word in two months") is recorded separately and never
   counted as a rejection.
-- **"They want to schedule an interview"** — creates an interview card, with the
+- **"They want to schedule an interview"** - creates an interview card, with the
   date left pending until a real slot is confirmed.
-- **"It's Tuesday at 9"** — records the confirmed interview slot.
-- **"The interview happened"** — marks it interviewed and adds a debrief to the job's notes.
-- **"I got an offer"** — records the offer.
-- **"I withdrew" / "I pulled out"** — closes it as withdrawn.
-- **"Open my dashboard"** — regenerates and opens the HTML dashboard.
+- **"It's Tuesday at 9"** - records the confirmed interview slot.
+- **"The interview happened"** - marks it interviewed and adds a debrief to the job's notes.
+- **"I got an offer"** - records the offer.
+- **"I withdrew" / "I pulled out"** - closes it as withdrawn.
+- **"Open my dashboard"** - regenerates and opens the HTML dashboard.
 
 ## Anytime
 
-- **"Make me a guide about colour theory"** — builds a study page in your library.
-- **"What's going on with my search?"** — a briefing of where everything stands.
+- **"Make me a guide about colour theory"** - builds a study page in your library.
+- **"What's going on with my search?"** - a briefing of where everything stands.
 
 ## Ground rules worth stating if asked
 

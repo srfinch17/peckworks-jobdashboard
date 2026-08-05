@@ -90,7 +90,9 @@ Ask in this order, one at a time:
 5. What has to be true for a job to be worth applying to. Then what makes one an
    instant no. These become the scoring rubric.
 6. Anything they never want written on their behalf, words, phrases, claims.
-   These become `banned_phrases`.
+   These become `banned_phrases`. The em dash character is pre-seeded in there
+   already as a starting default; say so, and let them remove it if they want
+   it back.
 
 ## Step 5, the baseline
 
@@ -123,8 +125,10 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/dashboard.py" "<workspace-path>"
 
 This writes `CareerDashboard.html` in the workspace root and opens it in their
 browser. Tell them to bookmark it, and tell them it is a plain file on their
-computer, no internet, no login, no server. It updates itself every time they
-add or change a job.
+computer that works offline, with no login and no server; the only thing it
+fetches over the internet is two Google fonts for the visual style, and
+nothing about them or their job search is ever uploaded. It updates itself
+every time they add or change a job.
 
 If they later want to add a page to the library (`guides/`), a guide can declare
 its own category and icon with two meta tags, `<meta name="jobkit-category"

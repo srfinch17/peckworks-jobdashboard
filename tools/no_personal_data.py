@@ -36,6 +36,18 @@ PLACEHOLDER_ALLOWLIST: set[tuple[str, str]] = {
     ("docs/superpowers/plans/2026-08-03-jobkit-core-loop.md", "someone@gmail.com"),
 }
 
+# Same idea as PLACEHOLDER_ALLOWLIST, but for hits from the local forbidden-
+# strings file rather than the ALWAYS patterns, and keyed with a line number:
+# a forbidden identity fragment is a false positive here only because it is a
+# substring of the GitHub owner/repo name, which forbidden_strings.local.txt
+# itself documents as deliberately public (it is already in the repo URL and
+# the git remote) and asks reviewers not to block on. Line-scoped so the same
+# fragment appearing anywhere else in the file - a real, non-public mention -
+# still stops the commit.
+FORBIDDEN_LINE_ALLOWLIST: set[tuple[str, int]] = {
+    ("README.md", 11),  # the /plugin marketplace add ... install command
+}
+
 SKIP_DIRS = {".git", "__pycache__", "node_modules", "vendor", ".venv", ".pytest_cache"}
 SKIP_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".pdf", ".ico", ".woff", ".woff2", ".zip"}
 # Relative-path (posix, repo-root-relative) exact matches, not bare basenames -
@@ -105,6 +117,8 @@ def scan(repo: Path, forbidden: list[str]) -> list[tuple[Path, int, str, str]]:
                     if (rel_posix, found) in PLACEHOLDER_ALLOWLIST:
                         continue
                     hits.append((rel, lineno, label, found))
+            if (rel_posix, lineno) in FORBIDDEN_LINE_ALLOWLIST:
+                continue
             low = line.lower()
             for original, term in zip(forbidden, terms):
                 if term and term in low:

@@ -82,3 +82,53 @@ def test_lane_dir_rejects_an_unknown_lane(tmp_path):
     config = workspace.init(tmp_path)
     with pytest.raises(ValueError, match="unknown lane"):
         workspace.lane_dir(tmp_path, config, "nonsense")
+
+
+# --- FIX 4: duplicate folder name across two lanes must not vanish silently ---
+
+def test_scan_with_warnings_flags_a_folder_that_exists_in_two_lanes(tmp_path):
+    config = workspace.init(tmp_path)
+    (workspace.lane_dir(tmp_path, config, "staged") / "7_Pixar_LA_Modeler").mkdir()
+    (workspace.lane_dir(tmp_path, config, "applied") / "7_Pixar_LA_Modeler").mkdir()
+    found, warnings = workspace.scan_with_warnings(tmp_path, config)
+    assert found["7_Pixar_LA_Modeler"] == "applied"
+    assert any("7_Pixar_LA_Modeler" in w and "staged" in w and "applied" in w for w in warnings)
+
+
+def test_scan_with_warnings_is_empty_for_no_collisions(tmp_path):
+    config = workspace.init(tmp_path)
+    (workspace.lane_dir(tmp_path, config, "staged") / "7_Pixar_LA_Modeler").mkdir()
+    _, warnings = workspace.scan_with_warnings(tmp_path, config)
+    assert warnings == []
+
+
+def test_scan_still_returns_a_plain_dict_matching_scan_with_warnings(tmp_path):
+    config = workspace.init(tmp_path)
+    (workspace.lane_dir(tmp_path, config, "staged") / "7_Pixar_LA_Modeler").mkdir()
+    (workspace.lane_dir(tmp_path, config, "applied") / "7_Pixar_LA_Modeler").mkdir()
+    found, _ = workspace.scan_with_warnings(tmp_path, config)
+    assert workspace.scan(tmp_path, config) == found
+
+
+# --- FIX 4: a lane renamed in jobkit.json after jobs existed in its old folder ---
+
+def test_find_unmapped_job_dirs_detects_a_renamed_lane(tmp_path):
+    config = workspace.init(tmp_path)
+    staged_dir = workspace.lane_dir(tmp_path, config, "staged")
+    (staged_dir / "7_Pixar_LA_Modeler").mkdir()
+    # Rename the lane in config, as if the user edited jobkit.json by hand.
+    old_name = config["lanes"]["staged"]
+    config["lanes"]["staged"] = "Jobs To Chase"
+    unmapped = workspace.find_unmapped_job_dirs(tmp_path, config, {"7_Pixar_LA_Modeler"})
+    assert unmapped == {old_name: ["7_Pixar_LA_Modeler"]}
+
+
+def test_find_unmapped_job_dirs_ignores_dirs_with_no_missing_matches(tmp_path):
+    config = workspace.init(tmp_path)
+    (tmp_path / "Some Other Folder").mkdir()
+    assert workspace.find_unmapped_job_dirs(tmp_path, config, {"7_Pixar_LA_Modeler"}) == {}
+
+
+def test_find_unmapped_job_dirs_returns_empty_when_nothing_is_missing(tmp_path):
+    config = workspace.init(tmp_path)
+    assert workspace.find_unmapped_job_dirs(tmp_path, config, set()) == {}

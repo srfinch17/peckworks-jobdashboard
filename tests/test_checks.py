@@ -171,6 +171,30 @@ def test_inflation_flags_i_am_a_world_class_generalist():
     assert checks.inflation("I am a world-class generalist")
 
 
+# --- FIX 1: the employer carve-out must not swallow a claim about the person
+# just because an employer preposition happens to precede it with no
+# employer noun following. Reproduced bypasses, must all flag. ---
+
+def test_inflation_flags_world_class_bypass_performed_at_a_level():
+    assert checks.inflation("I performed at a world-class level on that show")
+
+
+def test_inflation_flags_battle_tested_bypass_operate_with_an_approach():
+    assert checks.inflation("I operate with a battle-tested approach to lighting")
+
+
+def test_inflation_flags_proven_track_record_bypass_deliver_with_of_my_own():
+    assert checks.inflation("I deliver with a proven track record of my own")
+
+
+def test_inflation_flags_world_class_environment_artist_as_self_description():
+    assert checks.inflation("world-class environment artist")
+
+
+def test_inflation_flags_a_world_class_eye_for_composition():
+    assert checks.inflation("a world-class eye for composition")
+
+
 LINK_HEAVY = """## Links
 - [ArtStation](https://www.artstation.com/example/portfolio/gallery)
 - [Personal website](https://example.com/portfolio/gallery/index)
