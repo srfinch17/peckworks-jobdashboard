@@ -141,6 +141,15 @@ that lags behind the folders is worse than no dashboard, because it gets trusted
 Short. Tier used, score with a one-line reason, intermediary if any, folder created.
 No hype. A posting is not a callback.
 
+## Harvest before you finish
+
+If this turn taught something durable (the user corrected you, a site or an
+employer behaved unexpectedly, a draft was rejected for a stateable reason),
+save the lesson NOW per the `jobkit-learn` skill: site lessons to
+`intake_site_recipes.md`, lessons about the user to the workspace `CLAUDE.md`
+under `# Lessons learned`, dated, with the why. A repeated correction means
+the first one was never saved.
+
 ## Last
 
 Read the workspace `CLAUDE.md`. If anything there contradicts this skill, it wins.

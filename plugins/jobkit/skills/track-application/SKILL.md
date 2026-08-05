@@ -144,6 +144,15 @@ Always, at the end of the turn, whatever changed:
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/dashboard.py" "<workspace-path>" --no-open
 ```
 
+## Harvest before you finish
+
+If this turn taught something durable (the user corrected you, a site or an
+employer behaved unexpectedly, a draft was rejected for a stateable reason),
+save the lesson NOW per the `jobkit-learn` skill: site lessons to
+`intake_site_recipes.md`, lessons about the user to the workspace `CLAUDE.md`
+under `# Lessons learned`, dated, with the why. A repeated correction means
+the first one was never saved.
+
 ## Last
 
 Read the workspace `CLAUDE.md`. If anything there contradicts this skill, it wins.

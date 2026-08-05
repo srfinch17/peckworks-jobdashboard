@@ -135,6 +135,18 @@ Examples of things you might put here:
 - I will not relocate outside the Bay Area.
 
 (Delete these examples and write your own.)
+
+# Lessons learned
+
+JobKit appends what it learns from this search here, one dated bullet at a
+time, and reads this section back on every task. Corrections you make land
+here too, so the same mistake is not repeated next week. Edit or delete
+freely; this file is yours.
+
+Format: `- 2026-01-15: <the lesson, one or two sentences, and why it holds>`
+
+Lessons about a SITE (how a job board behaves, what broke, what worked)
+belong in `intake_site_recipes.md` instead, next to that site's recipe.
 """
 
 

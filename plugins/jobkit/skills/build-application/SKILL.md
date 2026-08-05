@@ -118,6 +118,15 @@ and if there is a line they could not talk about for two minutes in a room, cut 
 Something you helped write is not something they can defend live, and that gap is
 where interviews are lost.
 
+## Harvest before you finish
+
+If this turn taught something durable (the user corrected you, a site or an
+employer behaved unexpectedly, a draft was rejected for a stateable reason),
+save the lesson NOW per the `jobkit-learn` skill: site lessons to
+`intake_site_recipes.md`, lessons about the user to the workspace `CLAUDE.md`
+under `# Lessons learned`, dated, with the why. A repeated correction means
+the first one was never saved.
+
 ## Last
 
 Read the workspace `CLAUDE.md`. If anything there contradicts this skill, it wins.

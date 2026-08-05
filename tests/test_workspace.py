@@ -132,3 +132,12 @@ def test_find_unmapped_job_dirs_ignores_dirs_with_no_missing_matches(tmp_path):
 def test_find_unmapped_job_dirs_returns_empty_when_nothing_is_missing(tmp_path):
     config = workspace.init(tmp_path)
     assert workspace.find_unmapped_job_dirs(tmp_path, config, set()) == {}
+
+
+def test_starter_claude_md_has_a_lessons_section(tmp_path):
+    """The workspace CLAUDE.md is the plugin's local learning surface: skills
+    append dated lessons there and read them back on every task."""
+    workspace.init(tmp_path)
+    text = (tmp_path / "CLAUDE.md").read_text(encoding="utf-8")
+    assert "# Lessons learned" in text
+    assert "intake_site_recipes.md" in text

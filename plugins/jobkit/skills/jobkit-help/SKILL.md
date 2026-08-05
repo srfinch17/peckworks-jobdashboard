@@ -54,6 +54,8 @@ generates, not only this reference card:
 ## Anytime
 
 - **"Make me a guide about colour theory"** - builds a study page in your library.
+- **"Remember this" or just correct me** - the lesson is saved to your workspace
+  and changes how JobKit behaves from then on. It is your file; edit it anytime.
 - **"What's going on with my search?"** - a briefing of where everything stands.
 
 ## Ground rules worth stating if asked
