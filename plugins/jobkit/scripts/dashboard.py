@@ -374,7 +374,7 @@ PAGE_CSS = THEME_VARS + """
   .eyebrow{font-family:"IBM Plex Mono",monospace; font-size:.72rem; letter-spacing:.22em;
     text-transform:uppercase; color:var(--muted);}
   /* topbar */
-  .topbar{position:sticky; top:0; z-index:30; backdrop-filter:blur(8px);
+  .topbar{position:sticky; top:0; z-index:30; -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
     background:rgba(14,17,22,.82); border-bottom:1px solid var(--line);}
   .topbar .wrap{display:flex; align-items:center; gap:18px; height:54px;}
   .brand{font-family:"Space Grotesk",sans-serif; font-weight:600; letter-spacing:-.01em;}
@@ -865,6 +865,11 @@ def _library_section(guides: list, read_pages: dict) -> str:
 
 
 def main(argv: list) -> int:
+    unknown = [a for a in argv if a.startswith("--") and a != "--no-open"]
+    if unknown:
+        print(f"Unknown option: {' '.join(unknown)}")
+        print("Usage: python3 dashboard.py <workspace-path> [--no-open]")
+        return 2
     args = [a for a in argv if not a.startswith("--")]
     if not args:
         print("Usage: python3 dashboard.py <workspace-path> [--no-open]")
@@ -893,6 +898,10 @@ def main(argv: list) -> int:
     except json.JSONDecodeError as exc:
         print(f"job_ledger.json at {root} is unreadable ({exc}). "
               "Fix or remove that file, then try again.")
+        return 2
+    except ValueError as exc:
+        print(f"A file in {root} has the wrong shape ({exc}). "
+              "Restore it from a backup, or remove job_ledger.json and run setup again.")
         return 2
     except PermissionError as exc:
         print(f"Could not write in {root} ({exc}). A synced folder (Dropbox "

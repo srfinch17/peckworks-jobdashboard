@@ -493,6 +493,57 @@ def test_build_survives_a_ledger_entry_that_is_a_string_not_an_object(tmp_path):
     assert "Pixar" in html_doc
 
 
+def test_main_on_a_job_ledger_that_is_not_an_object_gives_a_friendly_message(tmp_path, capsys):
+    # Valid JSON, wrong shape: a hand-edit accident ledger.load rejects
+    # with ValueError, which must not escape as a raw traceback.
+    workspace.init(tmp_path)
+    (tmp_path / "job_ledger.json").write_text("[1, 2]", encoding="utf-8")
+    code = dashboard.main([str(tmp_path), "--no-open"])
+    out = capsys.readouterr().out
+    assert code == 2
+    assert "traceback" not in out.lower()
+    assert "job_ledger.json" in out
+
+
+def test_main_with_one_lane_key_deleted_gives_a_friendly_message(tmp_path, capsys):
+    import json
+    workspace.init(tmp_path)
+    cfg_path = tmp_path / "jobkit.json"
+    cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+    del cfg["lanes"]["expired"]
+    cfg_path.write_text(json.dumps(cfg), encoding="utf-8")
+    code = dashboard.main([str(tmp_path), "--no-open"])
+    out = capsys.readouterr().out
+    assert code == 2
+    assert "traceback" not in out.lower()
+
+
+def test_main_rejects_a_misspelled_flag_instead_of_opening_the_browser(tmp_path, capsys, monkeypatch):
+    # "--noopen" silently ignored means the browser pops open mid-run,
+    # which reads as the tool going rogue. A typo'd flag is a usage error.
+    opened = []
+    monkeypatch.setattr(dashboard.webbrowser, "open", lambda url: opened.append(url))
+    workspace.init(tmp_path)
+    code = dashboard.main([str(tmp_path), "--noopen"])
+    out = capsys.readouterr().out
+    assert code == 2
+    assert "--noopen" in out
+    assert opened == []
+
+
+def test_main_tolerates_a_bom_on_hand_edited_json(tmp_path):
+    # jobkit.json is documented as user-editable (the reading_stats toggle)
+    # and may be authored on Windows / synced via Dropbox; a UTF-8 BOM must
+    # not take the dashboard down. Same for job_ledger.json.
+    import json
+    workspace.init(tmp_path)
+    cfg = (tmp_path / "jobkit.json").read_text(encoding="utf-8")
+    (tmp_path / "jobkit.json").write_bytes(b"\xef\xbb\xbf" + cfg.encode("utf-8"))
+    (tmp_path / "job_ledger.json").write_bytes(b"\xef\xbb\xbf" + json.dumps({}).encode("utf-8"))
+    code = dashboard.main([str(tmp_path), "--no-open"])
+    assert code == 0
+
+
 def test_main_with_lanes_removed_from_config_gives_a_friendly_message(tmp_path, capsys):
     import json
     workspace.init(tmp_path)

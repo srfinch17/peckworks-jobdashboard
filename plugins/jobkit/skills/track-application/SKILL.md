@@ -90,12 +90,12 @@ interview is being arranged, record only the stage, with no date:
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/job_status.py" "<workspace-path>" "<fragment>" interview_scheduled
 ```
 
-Tell the user out loud that it shows as pending until a real time is locked
-in. Only when they confirm an actual slot ("it's Tuesday at 9") do you re-run
-the same command with `--date` set to that confirmed date. Guessing a
-plausible date to fill the gap is exactly the failure this whole system
-exists to prevent - an unknown date stays a visible gap on the dashboard, not
-a quiet lie.
+Tell the user out loud that no interview date is set yet, and that the date
+on the dashboard's chip is only the day this stage was recorded, not the
+interview slot. Only when they confirm an actual slot ("it's Tuesday at 9")
+do you re-run the same command with `--date` set to that confirmed date,
+replacing the recorded-day date with the real one. Guessing a plausible date
+to fill the gap is exactly the failure this whole system exists to prevent.
 
 ## The interview happened
 

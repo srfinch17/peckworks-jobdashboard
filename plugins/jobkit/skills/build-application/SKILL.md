@@ -64,8 +64,9 @@ Both halves matter equally.
 ## Write the resume
 
 Tailored `.txt` in the job folder, named
-`Resume_<Company>_<Role>.txt`. Text is the source of truth; Word and PDF are
-generated from it later.
+`Resume_<Company>_<Role>.txt`. Plain text is what JobKit produces; if an
+application demands another format, say so and let the user convert the text
+themselves so what they submit is what they reviewed.
 
 Select and order what the baseline already contains to match what the posting asks
 for. That is the entire job: selection and ordering, never invention.
@@ -118,6 +119,8 @@ generations. So when the user corrects a fact:
 3. Sweep the way `checks.py` matches: whitespace-normalized (a line-wrapped
    instance is invisible to a plain search), and count the matches before and
    after so a failed fix fails loudly instead of silently no-opping.
+
+## Cover letter
 
 **Off by default.** Write one only when the application requires it. Most are never
 read, and skipping it keeps the build fast.

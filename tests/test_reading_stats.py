@@ -202,3 +202,43 @@ def test_harvest_degrades_to_empty_stats_when_reading_stats_json_is_corrupt(tmp_
     stats = reading_stats.harvest(tmp_path)
 
     assert stats == {"watermark": 0, "pages": {}, "daily": {}}
+
+
+def test_corrupt_stats_file_heals_on_the_next_real_harvest(tmp_path, monkeypatch):
+    """A half-written reading_stats.json (crash or sync conflict mid-write)
+    must not kill the feature forever: the next harvest with real visits
+    starts fresh, records them, and leaves a VALID file behind."""
+    guides = tmp_path / "guides"
+    guides.mkdir()
+    (guides / "negotiating.html").write_text("<html></html>", encoding="utf-8")
+    history = tmp_path / "browser" / "History"
+    history.parent.mkdir()
+    _make_history_db(history, [((guides / "negotiating.html").resolve().as_uri(), "2026-01-05")])
+    monkeypatch.setattr(reading_stats, "candidate_history_paths", lambda: [history])
+    (tmp_path / "reading_stats.json").write_text("{not valid json", encoding="utf-8")
+
+    stats = reading_stats.harvest(tmp_path)
+
+    assert stats["pages"]["negotiating.html"]["opens"] == 1
+    healed = json.loads((tmp_path / "reading_stats.json").read_text(encoding="utf-8"))
+    assert healed["pages"]["negotiating.html"]["opens"] == 1
+    assert list(tmp_path.glob("*.tmp")) == []
+
+
+def test_one_unreadable_history_db_does_not_lose_the_others(tmp_path, monkeypatch):
+    """One mid-write or malformed browser DB must not discard the rows
+    already collected from every other browser and profile."""
+    guides = tmp_path / "guides"
+    guides.mkdir()
+    (guides / "one.html").write_text("<html></html>", encoding="utf-8")
+    bad = tmp_path / "browser_a" / "History"
+    good = tmp_path / "browser_b" / "History"
+    bad.parent.mkdir()
+    good.parent.mkdir()
+    bad.write_bytes(b"this is not a sqlite database at all")
+    _make_history_db(good, [((guides / "one.html").resolve().as_uri(), "2026-01-05")])
+    monkeypatch.setattr(reading_stats, "candidate_history_paths", lambda: [bad, good])
+
+    stats = reading_stats.harvest(tmp_path)
+
+    assert stats["pages"]["one.html"]["opens"] == 1

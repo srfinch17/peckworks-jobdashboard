@@ -40,8 +40,6 @@ fails after that, tell them to install Python 3 from python.org before
 continuing and stop.
 
 Report what is present and what is missing, with the exact command to fix each.
-`python-docx` and `reportlab` are only needed for Word and PDF output, say that
-plainly and say text files work without them.
 
 Check whether a browser automation tool is available. If not, say what still works
 without it: pasted text and structured job-board data, which is most of the value.
@@ -155,7 +153,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/dashboard.py" "<workspace-path>"
 This writes `CareerDashboard.html` in the workspace root and opens it in their
 browser. Tell them to bookmark it, and tell them it is a plain file on their
 computer that works offline, with no login and no server; the only thing it
-fetches over the internet is two Google fonts for the visual style, and
+fetches over the internet is three Google fonts for the visual style, and
 nothing about them or their job search is ever uploaded. It updates itself
 every time they add or change a job.
 

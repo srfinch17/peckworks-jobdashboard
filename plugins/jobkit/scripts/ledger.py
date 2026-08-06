@@ -48,7 +48,7 @@ def load(path) -> dict:
     path = Path(path)
     if not path.exists():
         return {}
-    data = json.loads(path.read_text(encoding="utf-8"))
+    data = json.loads(path.read_text(encoding="utf-8-sig"))
     if not isinstance(data, dict):
         raise ValueError(f"{path} is not a JSON object")
     return data

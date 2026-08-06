@@ -8,7 +8,7 @@ description: Use when the user asks what JobKit can do, how to use it, what to s
 Answer in plain English. This user may not be technical. Describe things to
 **say**, not commands to run.
 
-If no **workspace** (the folder on their computer where JobKit keeps every
+If the **workspace** (the folder on their computer where JobKit keeps every
 job, resume and the dashboard) does not exist yet, lead with setup and stop
 there - do not list the rest, it will not work yet.
 

@@ -41,9 +41,11 @@ before any fetch: one real intake wave turned ~41 pasted links into 31 unique jo
 zero fetch cost. Two shapes only id-level dedup catches:
 
 - **The same req live on several boards is ONE job, not several.** One folder, one
-  record, the employer's own posting URL on line 1 (that line is what the ledger
-  dedups on, so the canonical copy is the key), the other copies listed below it as
-  sources.
+  record, the employer's own posting URL on line 1, the other copies listed below
+  it as sources. The dashboard build records that line as the job's `posting_url`
+  in the ledger, so putting the canonical copy there is what makes a later repaste
+  recognizable. When dedup-checking a pasted id, check the existing folders too:
+  skipped jobs carry their URL in `skipped.md`, not in the ledger.
 - **A staffing req relisted by an aggregator under different AI-generated titles**
   is still one req. Titles lie; ids do not.
 
@@ -135,7 +137,9 @@ encounters are decisions, not accidents, so say the history out loud.
 In the staged lane (`lanes.staged` in `jobkit.json`), named
 `<score>_<Company>_<Location>_<Role>`. Underscores only, no spaces, no other
 punctuation. Location is a city or `Remote`. The dashboard splits CamelCase words
-for display, so `LookDevArtist` renders as "Look Dev Artist".
+for display in the location and role parts, so `LookDevArtist` renders as
+"Look Dev Artist". The company part shows exactly as typed, so write it the way
+it should read on a card (`LumenForge` stays `LumenForge`).
 
 Two files:
 

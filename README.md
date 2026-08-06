@@ -23,7 +23,7 @@ a job.
 Plan: `docs/superpowers/plans/2026-08-03-jobkit-core-loop.md`.
 
 The dashboard is a single self-contained HTML file you open by double-clicking: no server, no
-build step, and it works offline (the only outbound request is fetching two Google fonts for the
+build step, and it works offline (the only outbound request is fetching three Google fonts for the
 visual identity; nothing about you or your job data is ever sent anywhere). It is the visible
 payoff of the whole thing.
 

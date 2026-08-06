@@ -9,7 +9,7 @@ built in, never delete).
 
 ## Commands
 
-- Tests: `python -m pytest tests/ -q` (all green is the bar; 249 as of 2026-08-06)
+- Tests: `python -m pytest tests/ -q` (all green is the bar; 258 as of 2026-08-06)
 - Personal-data guard: `python tools/no_personal_data.py` (also wired as the pre-commit
   hook; needs the gitignored `tools/forbidden_strings.local.txt` and REFUSES to run
   without it)

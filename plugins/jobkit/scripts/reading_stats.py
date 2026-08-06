@@ -91,7 +91,13 @@ def _stats_path(root: Path) -> Path:
 def _load(root: Path) -> dict:
     path = _stats_path(root)
     if path.exists():
-        return json.loads(path.read_text(encoding="utf-8"))
+        try:
+            return json.loads(path.read_text(encoding="utf-8-sig"))
+        except (json.JSONDecodeError, OSError):
+            # A half-written file (crash or sync conflict mid-write) must
+            # not kill the feature forever: start fresh and let the next
+            # write replace the corrupt file with a valid one.
+            print(f"reading_stats: {path.name} was unreadable, starting fresh")
     return {"watermark": 0, "pages": {}, "daily": {}}
 
 
@@ -144,16 +150,22 @@ def harvest(root: Path) -> dict:
         rows = []
         with tempfile.TemporaryDirectory(prefix="jobkit_chrome_history_") as tmp_dir:
             for i, history in enumerate(histories):
-                tmp = Path(tmp_dir) / f"History{i}"
-                shutil.copy2(history, tmp)
-                con = sqlite3.connect(tmp)
+                # Per-DB fail-soft: one mid-write or malformed browser DB
+                # must not discard the rows already collected from every
+                # other browser and profile.
                 try:
-                    rows.extend(con.execute(
-                        "SELECT u.url, v.visit_time FROM visits v JOIN urls u ON u.id = v.url "
-                        "WHERE u.url LIKE 'file:///%' AND v.visit_time > ?", (stats["watermark"],)
-                    ).fetchall())
-                finally:
-                    con.close()
+                    tmp = Path(tmp_dir) / f"History{i}"
+                    shutil.copy2(history, tmp)
+                    con = sqlite3.connect(tmp)
+                    try:
+                        rows.extend(con.execute(
+                            "SELECT u.url, v.visit_time FROM visits v JOIN urls u ON u.id = v.url "
+                            "WHERE u.url LIKE 'file:///%' AND v.visit_time > ?", (stats["watermark"],)
+                        ).fetchall())
+                    finally:
+                        con.close()
+                except (OSError, sqlite3.Error) as e:
+                    print(f"reading_stats: skipped one browser history ({history}): {e}")
 
         for url, vt in rows:
             path = _file_url_to_path(url).lower()
@@ -172,7 +184,12 @@ def harvest(root: Path) -> dict:
             stats["daily"][day] = stats["daily"].get(day, 0) + 1
             wm = max(wm, vt)
         stats["watermark"] = wm
-        _stats_path(root).write_text(json.dumps(stats, indent=0, sort_keys=True), encoding="utf-8")
+        # Atomic replace, same pattern as the ledger: a crash mid-write must
+        # never leave a half-written stats file behind.
+        out = _stats_path(root)
+        tmp_out = out.with_suffix(out.suffix + ".tmp")
+        tmp_out.write_text(json.dumps(stats, indent=0, sort_keys=True), encoding="utf-8")
+        os.replace(tmp_out, out)
     except Exception as e:
         print(f"reading_stats: harvest skipped ({e})")
     return stats
@@ -180,7 +197,7 @@ def harvest(root: Path) -> dict:
 
 if __name__ == "__main__":
     import sys
-    s = harvest(Path(sys.argv[1]) if len(sys.argv) > 1 else Path.cwd())
+    s = harvest(Path(sys.argv[1]).expanduser() if len(sys.argv) > 1 else Path.cwd())
     pages = sorted(s["pages"].items(), key=lambda kv: -kv[1]["opens"])
     total = sum(p["opens"] for _, p in pages)
     print(f"{total} reads across {len(pages)} pages; top 5:")

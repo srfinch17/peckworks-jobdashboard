@@ -166,7 +166,7 @@ def load_config(root: Path) -> dict:
     path = Path(root).expanduser() / "jobkit.json"
     if not path.exists():
         raise FileNotFoundError(f"No jobkit.json in {root}. Run setup first.")
-    config = json.loads(path.read_text(encoding="utf-8"))
+    config = json.loads(path.read_text(encoding="utf-8-sig"))
     if not isinstance(config, dict):
         raise ValueError(f"{path} is not a JSON object")
     return config
