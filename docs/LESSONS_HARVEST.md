@@ -319,6 +319,17 @@ any stated timeline, which feeds 34). Companion finding: preparation material co
 user's own live questions consistently beat material researched AT them; when the user is asking
 questions, each question is a section request.
 
+### 38. The documented example input is the highest-probability failing input. **FOLDED, 2026-08-05: workspace.py expanduser, jobkit-setup Steps 1/3/5, README browser disclosure**
+Found the night before the first real install by mock-onboarding the product on its target
+platform's defaults. The README's own canonical phrase ("set up my job search in
+~/JobDashboard") was a live reproducer: two entry points expanded `~`, the one the phrase
+actually reaches did not. Same pass: read tracking scanned only Chrome's Default profile and
+stopped at the first browser found (silent no-ops that look like success), the target
+platform's default browser (Safari) was structurally unsupported with no disclosure, and
+macOS's developer-tools popup on first `python3` would have read as a failure. Rule: before a
+human first-run, execute the docs' example inputs literally on the target platform's defaults,
+and treat every silent no-op as a failure even when nothing crashes.
+
 ## DROPPED, with reasons
 
 | Rule / feature | Why it does not ship |

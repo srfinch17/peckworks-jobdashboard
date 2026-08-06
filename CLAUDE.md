@@ -9,7 +9,7 @@ built in, never delete).
 
 ## Commands
 
-- Tests: `python -m pytest tests/ -q` (all green is the bar; 240 as of 2026-08-06)
+- Tests: `python -m pytest tests/ -q` (all green is the bar; 249 as of 2026-08-06)
 - Personal-data guard: `python tools/no_personal_data.py` (also wired as the pre-commit
   hook; needs the gitignored `tools/forbidden_strings.local.txt` and REFUSES to run
   without it)
@@ -52,6 +52,9 @@ built in, never delete).
   names must exist; grep before shipping. Tested-but-dead code is not a feature.
 - **User-facing surfaces are read by a non-technical person.** Plain-English errors with
   the path echoed, exit 2 for usage problems, no raw tracebacks on reachable input.
+- **Before any human first-run, dry-run the docs' own example inputs literally** on the
+  target platform's defaults (lesson 38: the canonical `~/JobDashboard` phrase was itself
+  a reproducer; a silent no-op counts as a failure even when nothing crashes).
 
 ## Architecture in one breath
 
