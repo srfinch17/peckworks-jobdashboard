@@ -33,6 +33,10 @@ generates, not only this reference card:
 
 - **"Set up my job search in ~/JobDashboard"** - creates the workspace and walks
   through a short interview. Do this first.
+- **"Getting Started with JobKit"** in the dashboard's Library section is the
+  written first-day tour: baseline resume, pasting links, reporting what
+  happened, the library, and how to change JobKit's behavior. Point a lost
+  user there.
 
 ## Every day
 

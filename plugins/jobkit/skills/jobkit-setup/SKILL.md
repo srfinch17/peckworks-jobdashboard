@@ -55,7 +55,8 @@ python3 -c "import sys; sys.path.insert(0, r'${CLAUDE_PLUGIN_ROOT}/scripts'); im
 
 This creates the five lane folders (jobs to apply to, applied, not applied,
 skipped, expired), a `Baseline/` folder for their resume, a `guides/` folder for
-their library, a starter `CLAUDE.md`, and a starter `intake_site_recipes.md`.
+their library (pre-loaded with a Getting Started guide they can read from the
+dashboard any time), a starter `CLAUDE.md`, and a starter `intake_site_recipes.md`.
 Tell them what each of those is in plain words. Do not recreate `CLAUDE.md` or
 `intake_site_recipes.md`, `workspace.init` already wrote them; just point the
 user at them and say they can edit `CLAUDE.md` any time to change how JobKit
@@ -155,8 +156,16 @@ it understands are: `layers`, `send`, `clock`, `calendar`, `x-circle`,
 
 ## Step 7, tell them what to do next
 
-Exactly one instruction: **paste a job link.** Nothing else. They will discover
-the rest by asking, and `/jobkit-help` lists it.
+Close with exactly three lines, no more:
+
+1. **Paste me a job link** and I will take it from there.
+2. **Double-click `CareerDashboard.html`** whenever you want to see where things stand.
+3. When you have a minute, **read "Getting Started with JobKit"** in the
+   dashboard's Library section; it is the full tour, including how to change
+   how I behave for you.
+
+Do not explain further. They will discover the rest by asking, and
+`/jobkit-help` lists it.
 
 ## Last
 

@@ -197,6 +197,14 @@ def init(root: Path) -> dict:
 
     _write_if_absent(root / "intake_site_recipes.md", STARTER_RECIPES)
     _write_if_absent(root / "CLAUDE.md", STARTER_CLAUDE_MD)
+
+    # First-day guide: shipped as a real HTML file next to this script so it can
+    # be previewed in a browser during development, copied (never clobbered) into
+    # the user's library where the dashboard picks it up like any other guide.
+    template = Path(__file__).resolve().parent.parent / "templates" / "Getting_Started.html"
+    if template.exists():
+        _write_if_absent(safe_join(root, "guides", "Getting_Started.html"),
+                         template.read_text(encoding="utf-8"))
     return config
 
 

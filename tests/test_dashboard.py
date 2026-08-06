@@ -216,8 +216,26 @@ def test_a_guide_with_a_hostile_title_is_escaped(tmp_path):
 
 def test_empty_guides_dir_renders_an_honest_empty_state(tmp_path):
     workspace.init(tmp_path)
+    # A user can delete the starter guide; the library must still render honestly.
+    for page in (tmp_path / "guides").glob("*.html"):
+        page.unlink()
     html = dashboard.build(tmp_path, "2026-02-01")
     assert "No guides yet" in html
+
+
+# --- first-run "Start here" panel ---
+
+def test_brand_new_workspace_shows_a_start_here_panel(tmp_path):
+    workspace.init(tmp_path)
+    html = dashboard.build(tmp_path, "2026-02-01")
+    assert "Start here" in html
+    assert "Baseline" in html
+
+
+def test_start_here_panel_disappears_once_a_job_exists(tmp_path):
+    _workspace_with_two_jobs(tmp_path)
+    html = dashboard.build(tmp_path, "2026-02-01")
+    assert "Start here" not in html
 
 
 # --- interviews panel ---

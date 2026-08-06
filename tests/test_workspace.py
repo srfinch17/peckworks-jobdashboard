@@ -39,6 +39,35 @@ def test_init_never_overwrites_user_claude_md(tmp_path):
     assert "Never show me unpaid gigs" in (tmp_path / "CLAUDE.md").read_text(encoding="utf-8")
 
 
+def test_init_installs_the_getting_started_guide(tmp_path):
+    workspace.init(tmp_path)
+    guide = tmp_path / "guides" / "Getting_Started.html"
+    assert guide.exists()
+    text = guide.read_text(encoding="utf-8")
+    assert "<title>" in text
+    assert 'name="description"' in text
+    assert 'name="jobkit-category"' in text
+    assert 'name="jobkit-icon"' in text
+
+
+def test_getting_started_guide_is_self_contained_and_clean(tmp_path):
+    workspace.init(tmp_path)
+    text = (tmp_path / "guides" / "Getting_Started.html").read_text(encoding="utf-8")
+    assert "fetch(" not in text
+    assert "XMLHttpRequest" not in text
+    assert "—" not in text
+    # The customization story: the guide must tell the user their CLAUDE.md wins.
+    assert "CLAUDE.md" in text
+
+
+def test_init_never_overwrites_an_edited_guide(tmp_path):
+    workspace.init(tmp_path)
+    guide = tmp_path / "guides" / "Getting_Started.html"
+    guide.write_text("<html>my edits</html>", encoding="utf-8")
+    workspace.init(tmp_path)
+    assert guide.read_text(encoding="utf-8") == "<html>my edits</html>"
+
+
 def test_scan_maps_folders_to_lanes(tmp_path):
     config = workspace.init(tmp_path)
     (workspace.lane_dir(tmp_path, config, "staged") / "7_Pixar_Emeryville_Modeler").mkdir()

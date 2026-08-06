@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Getting Started with JobKit</title>
+<meta name="description" content="Your first day with JobKit: add your baseline resume, paste a job link, tell Claude what happens, and make the tool yours.">
+<meta name="jobkit-category" content="Start">
+<meta name="jobkit-icon" content="sparkles">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiIgcm9sZT0iaW1nIiBhcmlhLWxhYmVsPSJDYXJlZXIgbWlzc2lvbi1jb250cm9sIG1hcmsg4oCUIGEgcmlzaW5nIHRlYWwtYW1iZXItb3JhbmdlIHN0YWlyY2FzZSI+CiAgPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0iIzBEMTAxNSIvPgogIDxyZWN0IHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgcng9IjciIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzJDMzQ0MiIgc3Ryb2tlLXdpZHRoPSIxIi8+CiAgPHJlY3QgeD0iNS41IiB5PSIxOCIgd2lkdGg9IjUuNSIgaGVpZ2h0PSI4IiByeD0iMS42IiBmaWxsPSIjMkJFMENFIi8+CiAgPHJlY3QgeD0iMTMuMjUiIHk9IjEyLjUiIHdpZHRoPSI1LjUiIGhlaWdodD0iMTMuNSIgcng9IjEuNiIgZmlsbD0iI0Y1QzEzRCIvPgogIDxyZWN0IHg9IjIxIiB5PSI2LjUiIHdpZHRoPSI1LjUiIGhlaWdodD0iMTkuNSIgcng9IjEuNiIgZmlsbD0iI0ZGOEEzRCIvPgo8L3N2Zz4K">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0D1015; --ink-2:#151A21; --ink-3:#1C2330;
+    --line:#2C3442; --line-soft:#212834;
+    --text:#EAEDF3; --muted:#94A0B2; --muted-2:#5F6A7B;
+    --signal:#FF8A3D; --have:#2BE0CE; --partial:#F5C13D; --adjacent:#6E9BFF;
+    --violet:#B98CFF; --offer:#2EE36E; --deny:#FF5C82; --r:14px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--ink); color:var(--text);
+    font-family:"IBM Plex Sans",system-ui,-apple-system,sans-serif; line-height:1.6; -webkit-font-smoothing:antialiased;
+    background-image:linear-gradient(var(--line-soft) 1px,transparent 1px),linear-gradient(90deg,var(--line-soft) 1px,transparent 1px);
+    background-size:46px 46px,46px 46px; background-position:center top;}
+  body::before{content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background:radial-gradient(120% 80% at 50% -10%, transparent 30%, var(--ink) 78%);}
+  .wrap{max-width:880px; margin:0 auto; padding:0 24px 60px; position:relative; z-index:1;}
+  a{color:var(--have);}
+  ::selection{background:var(--signal); color:#1a1205;}
+  .mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,monospace;}
+  .eyebrow{font-family:"IBM Plex Mono",monospace; font-size:.72rem; letter-spacing:.22em;
+    text-transform:uppercase; color:var(--muted); margin-top:44px;}
+  h1{font-family:"Space Grotesk",sans-serif; font-weight:600; font-size:clamp(1.7rem,4.4vw,2.4rem);
+    line-height:1.1; letter-spacing:-.02em; margin:10px 0 6px;}
+  h1 .hl{color:var(--signal);}
+  .lede{color:var(--muted); font-size:1.02rem; max-width:640px;}
+  .panel{position:relative; margin-top:26px; border:1px solid var(--line); border-radius:18px;
+    padding:20px 24px 22px; overflow:hidden;
+    background:linear-gradient(180deg, color-mix(in srgb,var(--pa) 7%,var(--ink-2)) 0, var(--ink-2) 190px);}
+  .panel::before{content:""; position:absolute; top:0; left:0; right:0; height:3px;
+    background:linear-gradient(90deg,var(--pa), color-mix(in srgb,var(--pa) 25%,transparent));}
+  .c-orange{--pa:var(--signal);} .c-teal{--pa:var(--have);} .c-amber{--pa:var(--partial);}
+  .c-blue{--pa:var(--adjacent);} .c-violet{--pa:var(--violet);} .c-green{--pa:var(--offer);}
+  .panel h2{font-family:"Space Grotesk",sans-serif; font-weight:600; font-size:1.12rem; margin:0 0 8px;
+    letter-spacing:-.01em; display:flex; align-items:center; gap:10px;}
+  .num{flex:none; width:28px; height:28px; display:grid; place-items:center; border-radius:9px;
+    font-family:"IBM Plex Mono",monospace; font-size:.85rem; font-weight:700;
+    color:var(--pa); background:color-mix(in srgb,var(--pa) 15%,transparent);
+    border:1px solid color-mix(in srgb,var(--pa) 42%,transparent);}
+  .panel p, .panel li{color:var(--text); font-size:.95rem;}
+  .panel .why{color:var(--muted); font-size:.88rem; border-left:2px solid color-mix(in srgb,var(--pa) 45%,transparent);
+    padding:2px 0 2px 12px; margin:12px 0 0;}
+  .say{font-family:"IBM Plex Mono",monospace; font-size:.84rem; color:var(--have);
+    background:var(--ink-3); border:1px solid var(--line); border-radius:9px;
+    padding:8px 12px; margin:8px 0; display:block;}
+  code{font-family:"IBM Plex Mono",monospace; font-size:.86em; color:var(--partial);
+    background:var(--ink-3); border:1px solid var(--line-soft); border-radius:6px; padding:1px 6px;}
+  ul{padding-left:20px; margin:8px 0;}
+  li{margin:5px 0;}
+  footer{margin-top:40px; font-family:"IBM Plex Mono",monospace; font-size:.72rem; color:var(--muted-2);}
+</style>
+</head><body>
+<div class="wrap">
+
+  <div class="eyebrow">Peckworks JobKit</div>
+  <h1>Welcome. Here is your <span class="hl">first day</span>.</h1>
+  <p class="lede">JobKit is a job-search workspace that lives entirely on your computer.
+  You talk to Claude in plain English; JobKit keeps the folders, the tracking, and this
+  dashboard organized for you. Nothing about you or your search is ever uploaded anywhere.</p>
+
+  <section class="panel c-orange">
+    <h2><span class="num">1</span>Put your resume in the Baseline folder</h2>
+    <p>Inside your workspace there is a folder called <code>Baseline</code>. Save your
+    current resume there (any format is fine, plain text works great). If you do not have
+    one, just tell Claude and it will build one with you, one job at a time.</p>
+    <p class="why">Why it matters: every resume and cover letter JobKit ever writes is built
+    only from what is in Baseline. It never invents experience for you. On team projects,
+    be exact about which part was yours, because that is exactly what will be claimed later.</p>
+  </section>
+
+  <section class="panel c-teal">
+    <h2><span class="num">2</span>Paste a job link</h2>
+    <p>Found a job posting? Copy the link, come back to Claude, and say:</p>
+    <span class="say">Here is a job: https://example.com/careers/3d-artist</span>
+    <p>JobKit reads the posting, scores it 1 to 10 against what you told it you want, and
+    files it in a tracked folder. If a site will not let it in, paste the posting text
+    instead; that always works.</p>
+  </section>
+
+  <section class="panel c-amber">
+    <h2><span class="num">3</span>Tell Claude what happens</h2>
+    <p>You drive; JobKit never guesses. When something changes, just say it like you would
+    to a friend:</p>
+    <span class="say">I applied to the LumenForge job.</span>
+    <span class="say">BrightPath rejected me.</span>
+    <span class="say">I have an interview at Marrowfield on Thursday.</span>
+    <p class="why">Silence is never treated as rejection, and dates are only recorded when
+    you report them. The dashboard updates itself after every change.</p>
+  </section>
+
+  <section class="panel c-blue">
+    <h2><span class="num">4</span>Your dashboard</h2>
+    <p>Double-click <code>CareerDashboard.html</code> in your workspace folder. Bookmark it.
+    It is a plain file, no login, no server, works offline. It shows what is ready to apply
+    to, what you are waiting on, interviews, offers, and this library.</p>
+  </section>
+
+  <section class="panel c-violet">
+    <h2><span class="num">5</span>The library: pages that teach you things</h2>
+    <p>The Library section of the dashboard shows every page in your <code>guides</code>
+    folder, including this one. Want to actually learn something for this search?</p>
+    <span class="say">Make me a study page about salary negotiation.</span>
+    <p>Claude builds it, drops it into <code>guides</code>, and it appears in the library
+    with an icon and a category. If read tracking is on, pages you have opened get marked
+    as read, so you can see what you have actually studied.</p>
+  </section>
+
+  <section class="panel c-green">
+    <h2><span class="num">6</span>Make it yours</h2>
+    <p>Want JobKit to behave differently? You never have to edit the tool. Just tell Claude:</p>
+    <span class="say">Remember this: never show me unpaid or "for exposure" postings.</span>
+    <p>That gets written into the <code>CLAUDE.md</code> file in your workspace, and every
+    JobKit skill obeys that file over its own defaults. Add steps to the workflow, change
+    the score cutoff, rename things, whatever you want. JobKit also writes its own dated
+    lessons there as it learns your search; that file is yours to edit or delete.</p>
+  </section>
+
+  <footer>Everything stays on your computer. The only outbound request on any JobKit page
+  is for the two fonts, and it works fine without them.</footer>
+
+</div>
+</body></html>

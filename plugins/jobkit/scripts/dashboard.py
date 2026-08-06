@@ -423,6 +423,10 @@ PAGE_CSS = THEME_VARS + """
     padding:4px 10px; border-radius:20px; border:1px solid color-mix(in srgb,var(--pa) 30%,transparent);
     background:color-mix(in srgb,var(--pa) 9%,transparent);}
   .empty{font-family:"IBM Plex Mono",monospace; font-size:.82rem; color:var(--muted); padding:14px 2px;}
+  .startlist{margin:10px 0 4px; padding-left:22px;}
+  .startlist li{margin:7px 0; font-size:.94rem;}
+  .startlist .mono{color:var(--have); font-size:.86em;}
+  #start a{color:var(--have); text-decoration:underline;}
   /* search */
   .toolbar{margin:22px 0 0;}
   .libsearch{display:flex; align-items:center; gap:8px; background:var(--ink-3); max-width:420px;
@@ -578,7 +582,29 @@ def render(context: dict) -> str:
     interviews_label = label("interviews", "Interviews")
     offers_label = label("offers", "Offers")
 
-    sections = "".join([
+    # First run: a board with zero jobs reads as "broken" to a non-technical
+    # person, so it explains itself until the first job folder exists.
+    start_panel = ""
+    if not any(context[k] for k in
+               ("staged", "active", "interviews", "offers", "closed", "missing")):
+        start_panel = (
+            '<section class="panel p-ready" id="start">'
+            f'<div class="phead"><span class="picon">{_icon("sparkles")}</span>'
+            '<h2>Start here</h2><div class="rule"></div></div>'
+            '<ol class="startlist">'
+            '<li>Save your resume into the <span class="mono">Baseline</span> folder '
+            '(or ask Claude to help you build one).</li>'
+            '<li>Paste a job link to Claude: <span class="mono">"Here is a job: '
+            '&lt;link&gt;"</span>. It shows up on this board.</li>'
+            '<li>Tell Claude what happens ("I applied", "they rejected me") and this '
+            'page keeps itself up to date.</li>'
+            '</ol>'
+            '<div class="empty">The full tour is in the Library below: '
+            '<a href="guides/Getting_Started.html">Getting Started with JobKit</a>.</div>'
+            '</section>'
+        )
+
+    sections = start_panel + "".join([
         _section(offers_label, context["offers"], "offers", "p-offers", "sparkles",
                  hide_if_empty=True),
         _section(interviews_label, context["interviews"], "interviews", "p-interviews", "calendar",
