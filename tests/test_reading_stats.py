@@ -98,6 +98,39 @@ def test_watermark_is_monotonic_and_second_harvest_does_not_double_count(tmp_pat
     assert stats2["pages"]["negotiating.html"]["opens"] == 1
 
 
+def test_harvest_merges_visits_from_every_installed_browser(tmp_path, monkeypatch):
+    """A user with Chrome installed but who actually browses in Edge (or any
+    second Chromium browser) must not lose their reads to a first-match-wins
+    scan. Every existing history DB is harvested and merged."""
+    guides = tmp_path / "guides"
+    guides.mkdir()
+    (guides / "one.html").write_text("<html></html>", encoding="utf-8")
+    (guides / "two.html").write_text("<html></html>", encoding="utf-8")
+    db_a = tmp_path / "browser_a" / "History"
+    db_b = tmp_path / "browser_b" / "History"
+    db_a.parent.mkdir()
+    db_b.parent.mkdir()
+    _make_history_db(db_a, [((guides / "one.html").resolve().as_uri(), "2026-01-05")])
+    _make_history_db(db_b, [((guides / "two.html").resolve().as_uri(), "2026-01-06")])
+    monkeypatch.setattr(reading_stats, "candidate_history_paths", lambda: [db_a, db_b])
+
+    stats = reading_stats.harvest(tmp_path)
+    assert stats["pages"]["one.html"]["opens"] == 1
+    assert stats["pages"]["two.html"]["opens"] == 1
+
+
+def test_history_paths_include_non_default_chrome_profiles(tmp_path):
+    """Many real Chrome installs live in "Profile 1", not "Default". A scan
+    that only reads Default silently tracks nothing for those users."""
+    (tmp_path / "Default").mkdir()
+    (tmp_path / "Default" / "History").write_text("", encoding="utf-8")
+    (tmp_path / "Profile 1").mkdir()
+    (tmp_path / "Profile 1" / "History").write_text("", encoding="utf-8")
+    paths = reading_stats._history_paths_under(tmp_path)
+    assert tmp_path / "Default" / "History" in paths
+    assert tmp_path / "Profile 1" / "History" in paths
+
+
 # --- FIX 1: file:// URL parsing must not depend on the host platform ---
 
 def test_file_url_to_path_handles_a_posix_url_literal():

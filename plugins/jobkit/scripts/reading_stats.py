@@ -67,8 +67,21 @@ def candidate_history_paths() -> list:
             "Edge": base / "microsoft-edge",
         }
     for root in roots.values():
-        candidates.append(root / "Default" / "History")
+        candidates.extend(_history_paths_under(root))
     return candidates
+
+
+def _history_paths_under(browser_root: Path) -> list:
+    """Every profile's History DB under one browser's data dir.
+
+    Not just Default: Chrome puts each added person in "Profile 1", "Profile 2",
+    and for many real users that IS their browser; a Default-only scan tracks
+    nothing for them.
+    """
+    paths = [browser_root / "Default" / "History"]
+    if browser_root.is_dir():
+        paths.extend(sorted(browser_root.glob("Profile */History")))
+    return paths
 
 
 def _stats_path(root: Path) -> Path:
@@ -116,26 +129,31 @@ def harvest(root: Path) -> dict:
     stats = {"watermark": 0, "pages": {}, "daily": {}}
     try:
         stats = _load(root)
-        history = next((p for p in candidate_history_paths() if p.exists()), None)
-        if history is None:
+        histories = [p for p in candidate_history_paths() if p.exists()]
+        if not histories:
             return stats  # no supported browser installed; not an error
 
         root_url = root.resolve().as_posix().lower()
         wm = stats["watermark"]
-        # The live DB is locked while the browser runs, so it is copied first.
-        # A TemporaryDirectory (not a fixed path) so the copy - a snapshot of
-        # every URL the user has ever visited - never outlives this call.
+        # Every installed browser and profile, not first-match-wins: the user
+        # may have Chrome installed but actually read in Edge or "Profile 1".
+        # The live DB is locked while the browser runs, so each is copied
+        # first. A TemporaryDirectory (not a fixed path) so the copy - a
+        # snapshot of every URL the user has ever visited - never outlives
+        # this call.
+        rows = []
         with tempfile.TemporaryDirectory(prefix="jobkit_chrome_history_") as tmp_dir:
-            tmp = Path(tmp_dir) / "History"
-            shutil.copy2(history, tmp)
-            con = sqlite3.connect(tmp)
-            try:
-                rows = con.execute(
-                    "SELECT u.url, v.visit_time FROM visits v JOIN urls u ON u.id = v.url "
-                    "WHERE u.url LIKE 'file:///%' AND v.visit_time > ?", (stats["watermark"],)
-                ).fetchall()
-            finally:
-                con.close()
+            for i, history in enumerate(histories):
+                tmp = Path(tmp_dir) / f"History{i}"
+                shutil.copy2(history, tmp)
+                con = sqlite3.connect(tmp)
+                try:
+                    rows.extend(con.execute(
+                        "SELECT u.url, v.visit_time FROM visits v JOIN urls u ON u.id = v.url "
+                        "WHERE u.url LIKE 'file:///%' AND v.visit_time > ?", (stats["watermark"],)
+                    ).fetchall())
+                finally:
+                    con.close()
 
         for url, vt in rows:
             path = _file_url_to_path(url).lower()

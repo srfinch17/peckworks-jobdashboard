@@ -32,8 +32,12 @@ python3 --version
 
 If that fails, JobKit cannot run. Say so plainly: modern macOS (12.3+) ships
 only `python3`, never bare `python`, and every command JobKit runs uses
-`python3` for exactly that reason. If `python3 --version` fails here too, tell
-them to install Python 3 before continuing and stop.
+`python3` for exactly that reason. One macOS wrinkle to expect: on a fresh Mac,
+the first `python3` may pop up a dialog offering to install the "command line
+developer tools." That is normal and safe; tell the user to click Install and
+wait for it to finish, then run the check again. If `python3 --version` still
+fails after that, tell them to install Python 3 from python.org before
+continuing and stop.
 
 Report what is present and what is missing, with the exact command to fix each.
 `python-docx` and `reportlab` are only needed for Word and PDF output, say that
@@ -73,6 +77,12 @@ result to `reading_stats.json` in the workspace, and nothing is ever sent
 anywhere. Ask if they want to turn it off; if so, set
 `features.reading_stats` to `false` in the workspace's `jobkit.json`. It is on
 by default.
+
+Be straight about which browsers it can see: Chrome, Chromium, Brave, and
+Edge (every profile, not just the first). Safari does not let apps read its
+history, so guides opened in Safari are never marked as read. If the user is
+a Safari person and wants read tracking, suggest opening guide pages in
+Chrome; if they do not care, say nothing more about it.
 
 ## Step 4, the interview
 
@@ -117,8 +127,11 @@ reads `profile.json` should carry them too:
 
 Two paths:
 
-- **They have a resume.** Ask them to save it into `Baseline/` and tell you the
-  filename. Read it. Read back what you found, and ask what is missing or wrong.
+- **They have a resume.** Open the folder for them first so "save it into
+  Baseline" is a drag-and-drop, not a navigation puzzle: on macOS run
+  `open "<workspace-path>/Baseline"`, on Windows `explorer "<workspace-path>\Baseline"`.
+  Then ask them to save it there and tell you the filename. Read it. Read back
+  what you found, and ask what is missing or wrong.
 - **They do not.** Build one together. Walk through their history one role at a
   time. For each: what they did, what was actually theirs, what tools, what
   changed because of them. Write it to `Baseline/baseline_resume.txt`.

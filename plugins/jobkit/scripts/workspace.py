@@ -163,7 +163,7 @@ def safe_join(root: Path, *parts: str) -> Path:
 
 
 def load_config(root: Path) -> dict:
-    path = Path(root) / "jobkit.json"
+    path = Path(root).expanduser() / "jobkit.json"
     if not path.exists():
         raise FileNotFoundError(f"No jobkit.json in {root}. Run setup first.")
     config = json.loads(path.read_text(encoding="utf-8"))
@@ -180,7 +180,9 @@ def lane_dir(root: Path, config: dict, lane: str) -> Path:
 
 def init(root: Path) -> dict:
     """Create the workspace. Idempotent, and never clobbers a user's file."""
-    root = Path(root)
+    # expanduser: the canonical setup phrase is "~/JobDashboard", and an
+    # unexpanded ~ silently creates a literal "~" folder in the current dir.
+    root = Path(root).expanduser()
     root.mkdir(parents=True, exist_ok=True)
 
     config_path = root / "jobkit.json"

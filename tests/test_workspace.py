@@ -1,4 +1,6 @@
 import json
+from pathlib import Path
+
 import pytest
 
 import workspace
@@ -37,6 +39,24 @@ def test_init_never_overwrites_user_claude_md(tmp_path):
     (tmp_path / "CLAUDE.md").write_text("# My rules\nNever show me unpaid gigs.\n", encoding="utf-8")
     workspace.init(tmp_path)
     assert "Never show me unpaid gigs" in (tmp_path / "CLAUDE.md").read_text(encoding="utf-8")
+
+
+def test_init_expands_a_tilde_path(tmp_path, monkeypatch):
+    """The canonical first phrase is "set up my job search in ~/JobDashboard".
+    Passed through verbatim, an unexpanded ~ creates a literal "~" folder in
+    the current directory - the first thing a new macOS user would hit."""
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    workspace.init("~/JobKitHome")
+    assert (tmp_path / "JobKitHome" / "jobkit.json").exists()
+    assert not Path("~").exists()
+
+
+def test_load_config_expands_a_tilde_path(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    workspace.init("~/JobKitHome")
+    assert workspace.load_config("~/JobKitHome")["version"] == 1
 
 
 def test_init_installs_the_getting_started_guide(tmp_path):

@@ -36,7 +36,8 @@ stating plainly rather than burying:
 (Chrome, Chromium, Brave or Edge) for visits to guide files inside your workspace. It copies the
 history database, keeps only `file://` visits under the workspace, and discards everything else
 without recording it. Nothing is uploaded. The record lives in `reading_stats.json` in your own
-workspace. If no browser is found it does nothing and says so. Turn it off by setting
+workspace. If no supported browser is found it quietly does nothing (Safari is not
+supported; it does not let other apps read its history). Turn it off by setting
 `features.reading_stats` to `false` in `jobkit.json`.
 
 **Job postings.** Fetching a posting contacts that employer's site or job board, the same as
