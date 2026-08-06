@@ -119,6 +119,22 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/job_status.py" "<workspace-path>" "<fragm
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/job_status.py" "<workspace-path>" "<fragment>" closed --reason withdrawn
 ```
 
+## Before an interview, or whenever an employer comes up again
+
+Surface EVERY record for that employer across all lanes and statuses, applied,
+skipped, built, expired, all of it:
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/job_status.py" "<workspace-path>" --company "<Company>"
+```
+
+Two reasons. First, a duplicate application is invisible until the employer's ATS
+shows it on the eve of an interview; the only bad version is being surprised by
+the question. Second, skip records are per-POSTING, never per-employer: a prior
+skip of one req says nothing about a new req unless its recorded reason still
+applies, so read the old `skipped.md` reason before treating the employer as
+closed. Repeat encounters are decisions, not accidents.
+
 ## State the signal tier, no hype
 
 When reporting any of this back to the user, name how strong the signal

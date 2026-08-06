@@ -330,6 +330,55 @@ macOS's developer-tools popup on first `python3` would have read as a failure. R
 human first-run, execute the docs' example inputs literally on the target platform's defaults,
 and treat every silent no-op as a failure even when nothing crashes.
 
+## Added 2026-08-06 (a ~41-link intake wave in the source workspace; numbered on from 38)
+
+Arrived numbered 38-41, colliding with 38 (the dry-run lesson, harvested earlier the same
+week). Renumbered 39-42 at fold time; nothing above changes.
+
+**Build-in map:** 39 lands in `job-intake/SKILL.md` (the ledger already keys dedup on
+`posting_url`, so the canonical URL on line 1 IS the key scheme fix); 40 lands in
+`build-application/SKILL.md` + the existing `checks.py` machinery; 41 lands in
+`build-application/SKILL.md`; 42 lands in `job-intake/SKILL.md` (the skip log lives there) +
+`track-application/SKILL.md`. Mark FOLDED here when built in.
+
+### 39. Dedup on canonical IDs BEFORE fetching anything. **TRANSFER, extends 33** **FOLDED 2026-08-06: `plugins/jobkit/skills/job-intake/SKILL.md` (new step 0); canonical URL on line 1 feeds the ledger's existing `posting_url` dedup, no code change.**
+Every board URL carries a stable id (a job id, a `jk=`, a listing id, a uuid) buried in tracking
+noise. Extracting those ids first turned ~41 pasted links into 31 unique jobs at zero fetch cost,
+and caught two shapes nothing downstream would have seen as clearly: the SAME req live on three
+boards (one job, not three), and one staffing req relisted 3-4 times by an aggregator under
+different AI-generated titles. Corroboration bonus: when copies of the same req carry DIFFERENT
+salary bands, the bands are fabricated; only the employer's own copy is trusted for salary. Rules:
+canonicalize and dedup at intake, key the ledger on the canonical id where one exists, and treat
+cross-board copies as one record with multiple sources.
+
+### 40. The template outranks the prompt. **TRANSFER, tier 0, extends 30 and 31** **FOLDED 2026-08-06: `plugins/jobkit/skills/build-application/SKILL.md` ("When a fact is corrected, fix the source artifact FIRST"); the sweep mechanics reuse `checks.py`'s `normalize_whitespace`/`assert_removed` from 31.**
+When generation copies from a template/exemplar document, a correction stated in the
+instructions loses to a stale value sitting in the template: in a 7-agent build run, the kit
+stated a corrected number in bold and 3 of 7 agents still copied the template's stale value.
+Rules: when a fact is corrected, fix the TEMPLATE ARTIFACT first, before any generation runs;
+then sweep EVERY staged document for the stale value, not just new output (the sweep found two
+older staged documents still carrying it); sweep with whitespace-tolerant patterns and asserted
+match counts, because a line-wrapped instance is invisible to a plain search.
+
+### 41. Give generation steps explicit ABORT conditions. **TRANSFER** **FOLDED 2026-08-06: `plugins/jobkit/skills/build-application/SKILL.md` ("Hard disqualifiers ABORT the build"); an abort writes the skip record with the quoted evidence.**
+A one-sentence stop condition ("if the posting requires X that the profile rules out, STOP and
+report with the quoted evidence") converted what would have been a wrong finished artifact into a
+clean skip record: mid-build, a posting turned out to carry a hard disqualifier its board summary
+never showed. For this tool: build steps carry the profile's hard disqualifiers (location bounds,
+license/credential requirements, anything the user marked never) as abort conditions, and an
+abort auto-writes the skip record with the evidence quoted. Completing a build on a disqualified
+posting is worse than failing, because it looks like progress.
+
+### 42. Skip records are per-POSTING, never per-employer. **TRANSFER, extends 16 and 33** **FOLDED 2026-08-06: `plugins/jobkit/skills/job-intake/SKILL.md` (skip step: triage new reqs against the recorded reason via `job_status.py --company`; 404-beats-aggregator in source tiering) + `track-application/SKILL.md` ("Before an interview, or whenever an employer comes up again").**
+An employer skipped once is not an employer closed: a new req from a previously-skipped company
+explicitly resolved the recorded skip reason (the old req lacked the stack signal; the new one
+named it as a requirement) and became a top build. Rules: record every skip against the specific
+posting WITH its reason; when a new posting from the same employer arrives, triage it against the
+recorded reason rather than auto-dropping; and at both triage and build time, surface the
+employer's full history (applied, skipped, built, expired) so repeat encounters are decisions,
+not accidents. Companion freshness rule for 10 and 26: the employer's own careers page returning
+404 beats any aggregator's "active N days" claim; the 404 wins.
+
 ## DROPPED, with reasons
 
 | Rule / feature | Why it does not ship |

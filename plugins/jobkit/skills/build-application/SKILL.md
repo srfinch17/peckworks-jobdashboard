@@ -12,6 +12,25 @@ description: Use when the user asks to build, write, tailor, draft, or prepare a
 3. The job folder's `original_job_posting.md` and `note.md`
 4. The workspace `CLAUDE.md`
 
+## Hard disqualifiers ABORT the build
+
+Before writing anything, and again the moment new posting detail surfaces
+mid-build: check the full posting against the profile's hard disqualifiers
+(`deal_breakers`, location bounds, any license or credential requirement, anything
+the user marked never). Board summaries hide disqualifiers that the full text
+states plainly.
+
+If one is hit, **STOP. Do not finish the build.** Instead:
+
+1. Quote the disqualifying line from the posting, verbatim.
+2. Move the job folder to the skip lane and write `skipped.md` with the quoted
+   evidence and the reason, per the `job-intake` skill's skip format.
+3. Report the abort to the user with the quote.
+
+Completing a build on a disqualified posting is worse than failing, because it
+looks like progress. A clean skip record with evidence is the successful outcome
+here.
+
 ## The one rule everything else serves
 
 **Every claim traces to the baseline.** No invented metrics, no invented tools, no
@@ -83,7 +102,22 @@ deliberately does not attempt**, and prefer that material over a superlative.
 Leading with a measured limitation and deriving the approach from it can turn
 the weakest-sounding claim into the strongest one.
 
-## Cover letter
+## When a fact is corrected, fix the source artifact FIRST
+
+**The template outranks the prompt.** When generation copies from a template,
+exemplar, or prior artifact, a correction stated in conversation loses to a stale
+value sitting in that artifact: in one measured run, a correction stated in bold
+instructions was still overridden by the template's stale value in 3 of 7
+generations. So when the user corrects a fact:
+
+1. Fix it in the artifact the fact lives in (`Baseline/`, `profile.json`, a
+   template) BEFORE generating anything.
+2. Then sweep EVERY staged document in the workspace for the stale value, not
+   just the new draft. The field sweep that produced this rule found two older
+   staged documents still carrying the corrected value.
+3. Sweep the way `checks.py` matches: whitespace-normalized (a line-wrapped
+   instance is invisible to a plain search), and count the matches before and
+   after so a failed fix fails loudly instead of silently no-opping.
 
 **Off by default.** Write one only when the application requires it. Most are never
 read, and skipping it keeps the build fast.
